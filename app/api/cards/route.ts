@@ -9,7 +9,7 @@ import { getSession } from "@/lib/session";
 import AddressCard from "@/models/AddressCard";
 import mongoose from "mongoose";
 
-const DEFAULT_LIMIT = 12;
+const DEFAULT_LIMIT = 10;
 
 export async function GET(req: NextRequest) {
   const session = await getSession();

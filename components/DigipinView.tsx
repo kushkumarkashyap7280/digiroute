@@ -77,7 +77,7 @@ export default function DigipinView({ pin, coords }: Props) {
           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/convert" className="btn btn-primary btn-sm">
               <Compass size={14} />
-              <span>Use Converter Tool</span>
+              <span>Open DigiRoute Compass</span>
             </Link>
             <Link href="/" className="btn btn-outline btn-sm">
               <ArrowLeft size={14} />
@@ -218,7 +218,7 @@ export default function DigipinView({ pin, coords }: Props) {
 
         <Link href="/convert" className="btn btn-outline" style={{ padding: "0.75rem 1rem" }}>
           <Compass size={14} />
-          <span>Converter Tool</span>
+          <span>DigiRoute Compass</span>
         </Link>
       </div>
 

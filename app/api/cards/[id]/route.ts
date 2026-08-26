@@ -52,3 +52,39 @@ export async function DELETE(
   await card.deleteOne();
   return NextResponse.json({ message: "Deleted." });
 }
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorised." }, { status: 401 });
+
+  const { id } = await params;
+
+  try {
+    const { title, humanAddress, digipin, photoUrls, photoIds } = await req.json();
+
+    await connectDB();
+    const card = await AddressCard.findById(id);
+
+    if (!card)
+      return NextResponse.json({ error: "Card not found." }, { status: 404 });
+
+    if (card.ownerId.toString() !== session.userId)
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+
+    if (title !== undefined) card.title = title.trim();
+    if (humanAddress !== undefined) card.humanAddress = humanAddress.trim();
+    if (digipin !== undefined) card.digipin = digipin.toUpperCase().trim();
+    if (photoUrls !== undefined) card.photoUrls = photoUrls;
+    if (photoIds !== undefined) card.photoIds = photoIds;
+
+    await card.save();
+
+    return NextResponse.json({ card });
+  } catch (err: unknown) {
+    console.error("[PUT /api/cards/[id]]", err);
+    return NextResponse.json({ error: "Server error updating card." }, { status: 500 });
+  }
+}

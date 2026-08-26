@@ -87,7 +87,7 @@ export default function LocationCardView({ card, coords }: Props) {
           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/convert" className="btn btn-primary btn-sm">
               <Compass size={14} />
-              <span>Location Converter</span>
+              <span>DigiRoute Compass</span>
             </Link>
             <Link href="/" className="btn btn-outline btn-sm">
               <ArrowLeft size={14} />
@@ -116,9 +116,9 @@ export default function LocationCardView({ card, coords }: Props) {
           marginBottom: "1.25rem",
         }}
       >
-        <Link href="/" className="text-muted text-xs" style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+        <Link href="/dashboard" className="text-muted text-xs" style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
           <ArrowLeft size={13} />
-          <span>DigiRoute</span>
+          <span>Back to Dashboard</span>
         </Link>
         <span
           style={{

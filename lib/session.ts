@@ -1,7 +1,7 @@
 /**
  * lib/session.ts
- * Thin wrapper around iron-session for cookie-based auth sessions.
- * Uses the App Router's cookies() API.
+ * Lightweight cookie-based auth session management using jose (HS256 JWT)
+ * and the Next.js App Router cookies() API.
  */
 
 import { cookies } from "next/headers";

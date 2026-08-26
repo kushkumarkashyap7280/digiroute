@@ -7,6 +7,8 @@ import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "sonner";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
+import QueryProvider from "@/components/QueryProvider";
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -85,23 +87,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         {/* Inline script to set data-theme before paint — prevents flash */}
         <ThemeScript />
-        <AuthProvider>
-          <Navbar />
-          <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>{children}</div>
-          <Footer />
-          <PWAInstallPrompt />
-          <Toaster
-            position="bottom-right"
-            toastOptions={{
-              style: {
-                background: "var(--surface)",
-                color: "var(--text)",
-                border: "1px solid var(--border)",
-                boxShadow: "var(--shadow)",
-              },
-            }}
-          />
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <Navbar />
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>{children}</div>
+            <Footer />
+            <PWAInstallPrompt />
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                style: {
+                  background: "var(--surface)",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
+                  boxShadow: "var(--shadow)",
+                },
+              }}
+            />
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -11,11 +11,18 @@ type Mode = "login" | "signup";
 
 export default function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
-  const { refreshUser } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
   const isSignup = mode === "signup";
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Automatically redirect logged-in users away from /login and /signup to /dashboard
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace("/dashboard");
+    }
+  }, [user, authLoading, router]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +59,27 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       setLoading(false);
     }
   };
+
+  // If already authenticated, show redirect spinner
+  if (!authLoading && user) {
+    return (
+      <main
+        style={{
+          minHeight: "calc(100vh - var(--nav-height))",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "2rem",
+          background: "var(--bg)",
+        }}
+      >
+        <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+          <Loader2 size={36} className="spinner text-orange" />
+          <p className="text-muted text-sm">Already logged in. Redirecting to your dashboard…</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main

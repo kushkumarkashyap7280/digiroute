@@ -61,27 +61,47 @@ export default function Navbar() {
   return (
     <nav className="navbar" style={{ position: "sticky", top: 0, zIndex: 100 }}>
       <div className="navbar__inner">
-        {/* Logo */}
-        <Link href="/" className="navbar__logo" aria-label="DigiRoute Home" onClick={() => setMobileMenuOpen(false)}>
+        {/* Logo with Styled Brand Text */}
+        <Link
+          href="/"
+          className="navbar__logo"
+          aria-label="DigiRoute Home"
+          onClick={() => setMobileMenuOpen(false)}
+          style={{ display: "flex", alignItems: "center", gap: "0.6rem", textDecoration: "none" }}
+        >
           <Image
             src={
               theme === "dark"
                 ? "/Orange Minimalist Travel App Business Logo/dark.png"
                 : "/Orange Minimalist Travel App Business Logo/light.png"
             }
-            alt="DigiRoute"
-            height={34}
-            width={110}
-            style={{ height: 34, width: "auto", objectFit: "contain" }}
+            alt="DigiRoute Logo"
+            height={32}
+            width={32}
+            style={{ height: 32, width: "auto", objectFit: "contain" }}
             priority
           />
+          <span
+            style={{
+              fontSize: "1.3rem",
+              fontWeight: 800,
+              letterSpacing: "-0.03em",
+              background: "linear-gradient(135deg, var(--text) 30%, var(--orange) 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              display: "inline-block",
+              fontFamily: "var(--font-sans, system-ui, sans-serif)",
+            }}
+          >
+            DigiRoute
+          </span>
         </Link>
 
         {/* Desktop Links (hidden on mobile via CSS) */}
         <div className="navbar__right hide-mobile">
-          <Link href="/convert" className="btn btn-ghost btn-sm" id="nav-convert" title="DIGIPIN Converter">
+          <Link href="/convert" className="btn btn-ghost btn-sm" id="nav-convert" title="DigiRoute Compass">
             <Compass size={14} className="text-orange" />
-            <span>Converter Tool</span>
+            <span>DigiRoute Compass</span>
           </Link>
 
           {/* Theme toggle */}
@@ -227,7 +247,7 @@ export default function Navbar() {
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                   <Compass size={16} className="text-orange" />
-                  <span>Free DIGIPIN Converter</span>
+                  <span>DigiRoute Compass</span>
                 </div>
                 <ChevronRight size={15} className="text-muted" />
               </Link>

@@ -8,13 +8,13 @@
   "theme_color": "#f97316",
   "icons": [
     {
-      "src": "/Orange Minimalist Travel App Business Logo/dark.png",
+      "src": "/Orange Minimalist Travel App Business Logo/light.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/Orange Minimalist Travel App Business Logo/dark.png",
+      "src": "/Orange Minimalist Travel App Business Logo/light.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
