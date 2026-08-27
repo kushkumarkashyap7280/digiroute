@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 import {
@@ -10,7 +11,6 @@ import {
   Check,
   QrCode as QrCodeIcon,
   Sparkles,
-  ExternalLink,
   ShieldCheck,
 } from "lucide-react";
 
@@ -33,58 +33,56 @@ export default function DigiRouteQRCodeModal({
   humanAddress,
   isAuthenticated = false,
 }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [canvasNode, setCanvasNode] = useState<HTMLCanvasElement | null>(null);
   const [copiedPin, setCopiedPin] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
-  const [qrReady, setQrReady] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!isOpen || !url) return;
+    setMounted(true);
+  }, []);
 
-    setQrReady(false);
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  // Draw QR code onto the canvas with center logo overlay
+  const renderQRCode = useCallback(async (canvas: HTMLCanvasElement, targetUrl: string) => {
+    if (!canvas || !targetUrl) return;
 
-    // High error correction level 'H' (30% redundancy) to allow logo overlay in center
-    QRCode.toCanvas(
-      canvas,
-      url,
-      {
+    try {
+      // 1. Render base QR Code with Level H error correction (30% redundancy)
+      await QRCode.toCanvas(canvas, targetUrl, {
         width: 280,
         margin: 2,
         color: {
-          dark: "#111111",
+          dark: "#000000",
           light: "#ffffff",
         },
         errorCorrectionLevel: "H",
-      },
-      (err) => {
-        if (err) {
-          console.error("QR Code rendering error:", err);
-          return;
-        }
+      });
 
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-        // Overlay DigiRoute Logo in center of QR
-        const logo = new window.Image();
-        logo.src = "/favicon.png";
-        logo.onload = () => {
-          const center = canvas.width / 2;
-          const logoRadius = 26;
+      const center = canvas.width / 2;
+      const logoRadius = 24;
 
-          // Draw white circular backdrop
+      // 2. Draw white circular backdrop in center with orange border
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(center, center, logoRadius + 4, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = "#f97316";
+      ctx.stroke();
+      ctx.restore();
+
+      // 3. Try to overlay logo, fallback to styled 'D' badge if image load fails
+      const logo = new window.Image();
+      logo.crossOrigin = "anonymous";
+      logo.src = "/favicon.png";
+
+      logo.onload = () => {
+        try {
           ctx.save();
-          ctx.beginPath();
-          ctx.arc(center, center, logoRadius + 4, 0, Math.PI * 2);
-          ctx.fillStyle = "#ffffff";
-          ctx.fill();
-          ctx.lineWidth = 2.5;
-          ctx.strokeStyle = "#f97316";
-          ctx.stroke();
-
-          // Clip logo into circle
           ctx.beginPath();
           ctx.arc(center, center, logoRadius, 0, Math.PI * 2);
           ctx.clip();
@@ -96,15 +94,35 @@ export default function DigiRouteQRCodeModal({
             logoRadius * 2
           );
           ctx.restore();
+        } catch {
+          // Fallback if cross-origin clip issue
+        }
+      };
 
-          setQrReady(true);
-        };
-        logo.onerror = () => {
-          setQrReady(true);
-        };
-      }
-    );
-  }, [isOpen, url]);
+      logo.onerror = () => {
+        ctx.save();
+        ctx.fillStyle = "#f97316";
+        ctx.beginPath();
+        ctx.arc(center, center, logoRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("D", center, center);
+        ctx.restore();
+      };
+    } catch (err) {
+      console.error("Failed to render QR Code:", err);
+    }
+  }, []);
+
+  // Trigger render when modal opens and canvas element is attached
+  useEffect(() => {
+    if (isOpen && canvasNode && url) {
+      renderQRCode(canvasNode, url);
+    }
+  }, [isOpen, canvasNode, url, renderQRCode]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -115,8 +133,6 @@ export default function DigiRouteQRCodeModal({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
 
   const copyPin = () => {
     navigator.clipboard.writeText(digipin);
@@ -133,8 +149,7 @@ export default function DigiRouteQRCodeModal({
   };
 
   const downloadQR = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvasNode) return;
 
     // Create printable badge card with header and footer on canvas
     const downloadCanvas = document.createElement("canvas");
@@ -142,8 +157,8 @@ export default function DigiRouteQRCodeModal({
     if (!dCtx) return;
 
     const padding = 24;
-    const cardWidth = canvas.width + padding * 2;
-    const cardHeight = canvas.height + 150;
+    const cardWidth = canvasNode.width + padding * 2;
+    const cardHeight = canvasNode.height + 150;
 
     downloadCanvas.width = cardWidth;
     downloadCanvas.height = cardHeight;
@@ -164,15 +179,15 @@ export default function DigiRouteQRCodeModal({
     dCtx.fillText(title || "DigiRoute Doorstep Location", cardWidth / 2, 34);
 
     // Draw QR
-    dCtx.drawImage(canvas, padding, 48);
+    dCtx.drawImage(canvasNode, padding, 48);
 
     // DIGIPIN Code Box
-    const pinBoxY = canvas.height + 62;
+    const pinBoxY = canvasNode.height + 62;
     dCtx.fillStyle = "#fff7ed";
     dCtx.strokeStyle = "#ea580c";
     dCtx.lineWidth = 1.5;
-    dCtx.fillRect(padding, pinBoxY, canvas.width, 36);
-    dCtx.strokeRect(padding, pinBoxY, canvas.width, 36);
+    dCtx.fillRect(padding, pinBoxY, canvasNode.width, 36);
+    dCtx.strokeRect(padding, pinBoxY, canvasNode.width, 36);
 
     dCtx.fillStyle = "#c2410c";
     dCtx.font = "bold 16px monospace";
@@ -191,16 +206,18 @@ export default function DigiRouteQRCodeModal({
     toast.success("DigiRoute QR Pass downloaded!");
   };
 
-  return (
+  if (!isOpen || !mounted) return null;
+
+  return createPortal(
     <div
       onClick={onClose}
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 10000,
-        background: "rgba(0,0,0,0.82)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
+        zIndex: 99999999,
+        background: "rgba(0,0,0,0.85)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -306,7 +323,13 @@ export default function DigiRouteQRCodeModal({
           }}
         >
           <canvas
-            ref={canvasRef}
+            ref={(node) => {
+              if (node && node !== canvasNode) {
+                setCanvasNode(node);
+              }
+            }}
+            width={280}
+            height={280}
             style={{
               display: "block",
               width: 260,
@@ -371,6 +394,7 @@ export default function DigiRouteQRCodeModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

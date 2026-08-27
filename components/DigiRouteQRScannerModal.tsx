@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Html5Qrcode } from "html5-qrcode";
 import { toast } from "sonner";
@@ -31,6 +32,11 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
   const [activeCameraIndex, setActiveCameraIndex] = useState(0);
   const [torchOn, setTorchOn] = useState(false);
   const [hasTorch, setHasTorch] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Manual PIN fallback input
   const [manualPin, setManualPin] = useState("");
@@ -283,15 +289,15 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
     handleScanSuccess(clean);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  return createPortal(
     <div
       onClick={onClose}
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 100000,
+        zIndex: 99999999,
         background: "rgba(0,0,0,0.85)",
         backdropFilter: "blur(10px)",
         WebkitBackdropFilter: "blur(10px)",
@@ -640,6 +646,7 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
           }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -418,21 +418,33 @@ export default function ConvertToolClient() {
           {/* Tab 3: Encode Coordinates */}
           {mode === "encode" && (
             <form onSubmit={handleEncodeCoords} style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 130px), 1fr))", gap: "0.6rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: "0.6rem" }}>
                 <div className="form-group">
                   <label className="form-label" htmlFor="tool-lat" style={{ fontSize: "0.8rem", fontWeight: 600 }}>
                     Latitude
                   </label>
                   <input
                     id="tool-lat"
-                    type="number"
-                    step="any"
+                    type="text"
+                    inputMode="decimal"
                     className="form-input"
-                    placeholder="e.g. 12.9716"
+                    placeholder="e.g. 28.613939"
                     disabled={loading}
                     value={latInput}
-                    onChange={(e) => setLatInput(e.target.value)}
-                    style={{ fontSize: "0.88rem", padding: "0.55rem 0.7rem" }}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // Smart paste/typing: if string contains comma, space, or slash, split into lat and lon
+                      if (val.includes(",") || (val.includes(" ") && val.trim().split(/\s+/).length >= 2)) {
+                        const parts = val.split(/[,\s/]+/).filter(Boolean);
+                        if (parts.length >= 2) {
+                          setLatInput(parts[0]);
+                          setLonInput(parts[1]);
+                          return;
+                        }
+                      }
+                      setLatInput(val);
+                    }}
+                    style={{ fontSize: "0.88rem", padding: "0.55rem 0.7rem", fontFamily: "monospace" }}
                   />
                 </div>
                 <div className="form-group">
@@ -441,20 +453,63 @@ export default function ConvertToolClient() {
                   </label>
                   <input
                     id="tool-lon"
-                    type="number"
-                    step="any"
+                    type="text"
+                    inputMode="decimal"
                     className="form-input"
-                    placeholder="e.g. 77.5946"
+                    placeholder="e.g. 77.209021"
                     disabled={loading}
                     value={lonInput}
-                    onChange={(e) => setLonInput(e.target.value)}
-                    style={{ fontSize: "0.88rem", padding: "0.55rem 0.7rem" }}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.includes(",") || (val.includes(" ") && val.trim().split(/\s+/).length >= 2)) {
+                        const parts = val.split(/[,\s/]+/).filter(Boolean);
+                        if (parts.length >= 2) {
+                          setLatInput(parts[0]);
+                          setLonInput(parts[1]);
+                          return;
+                        }
+                      }
+                      setLonInput(val);
+                    }}
+                    style={{ fontSize: "0.88rem", padding: "0.55rem 0.7rem", fontFamily: "monospace" }}
                   />
                 </div>
               </div>
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+                <p className="text-muted" style={{ fontSize: "0.72rem", margin: 0, lineHeight: 1.4 }}>
+                  Enter latitude and longitude directly, or paste a coordinate pair (e.g. <code className="text-orange">28.6139, 77.2090</code>).
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const text = await navigator.clipboard.readText();
+                      if (text) {
+                        const parts = text.split(/[,\s/]+/).filter(Boolean);
+                        if (parts.length >= 2) {
+                          setLatInput(parts[0]);
+                          setLonInput(parts[1]);
+                          toast.success("Pasted coordinates from clipboard!");
+                        } else {
+                          toast.error("Clipboard does not contain a valid coordinate pair.");
+                        }
+                      }
+                    } catch {
+                      toast.error("Could not read clipboard. Please paste manually.");
+                    }
+                  }}
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: "0.72rem", padding: "0.2rem 0.4rem" }}
+                  title="Paste coordinate pair from clipboard"
+                >
+                  <span>Paste Pair</span>
+                </button>
+              </div>
+
               <button
                 type="submit"
-                disabled={loading || !latInput || !lonInput}
+                disabled={loading || !latInput.trim() || !lonInput.trim()}
                 className="btn btn-primary"
                 style={{ padding: "0.65rem 1rem", fontSize: "0.85rem", width: "100%", justifyContent: "center" }}
               >
