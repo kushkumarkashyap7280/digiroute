@@ -20,8 +20,11 @@ import {
   MapPin,
   ChevronRight,
   QrCode as QrCodeIcon,
+  Sparkles,
+  Info,
 } from "lucide-react";
 import DigiRouteQRScannerModal from "@/components/DigiRouteQRScannerModal";
+import NavbarBrandTypewriter from "@/components/NavbarBrandTypewriter";
 
 export default function Navbar() {
   const { user, loading, logout } = useAuth();
@@ -84,20 +87,7 @@ export default function Navbar() {
             style={{ height: 32, width: "auto", objectFit: "contain" }}
             priority
           />
-          <span
-            style={{
-              fontSize: "1.3rem",
-              fontWeight: 800,
-              letterSpacing: "-0.03em",
-              background: "linear-gradient(135deg, var(--text) 30%, var(--orange) 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              display: "inline-block",
-              fontFamily: "var(--font-sans, system-ui, sans-serif)",
-            }}
-          >
-            DigiRoute
-          </span>
+          <NavbarBrandTypewriter />
         </Link>
 
         {/* Desktop Links (hidden on mobile via CSS) */}
@@ -105,6 +95,10 @@ export default function Navbar() {
           <Link href="/convert" className="btn btn-ghost btn-sm" id="nav-convert" title="DigiRoute Compass">
             <Compass size={14} className="text-orange" />
             <span>DigiRoute Compass</span>
+          </Link>
+
+          <Link href="/about" className="btn btn-ghost btn-sm" id="nav-about" title="About DigiRoute">
+            <span>About</span>
           </Link>
 
           <button
@@ -262,6 +256,18 @@ export default function Navbar() {
                 <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                   <Compass size={16} className="text-orange" />
                   <span>DigiRoute Compass</span>
+                </div>
+                <ChevronRight size={15} className="text-muted" />
+              </Link>
+
+              <Link
+                href="/about"
+                className="btn btn-outline w-full"
+                style={{ justifyContent: "space-between", padding: "0.65rem 1rem", fontSize: "0.9rem" }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                  <Sparkles size={16} className="text-orange" />
+                  <span>About DigiRoute</span>
                 </div>
                 <ChevronRight size={15} className="text-muted" />
               </Link>

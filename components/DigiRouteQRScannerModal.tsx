@@ -9,12 +9,12 @@ import {
   Camera,
   QrCode as QrCodeIcon,
   RefreshCw,
-  Upload,
   AlertCircle,
   Volume2,
   CheckCircle2,
   Flashlight,
   Sparkles,
+  ArrowRight,
 } from "lucide-react";
 
 interface Props {
@@ -32,14 +32,18 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
   const [torchOn, setTorchOn] = useState(false);
   const [hasTorch, setHasTorch] = useState(false);
 
+  // Manual PIN fallback input
+  const [manualPin, setManualPin] = useState("");
+
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const readerId = "digiroute-html5-qr-reader";
 
   // Synthesize pleasant futuristic chime/beep using Web Audio API
   const playScanBeep = useCallback(() => {
     try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
       const osc = ctx.createOscillator();
@@ -74,7 +78,7 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
     }
   }, []);
 
-  // Handle successful QR code decode
+  // Handle successful QR code decode (from live camera or manual input)
   const handleScanSuccess = useCallback(
     async (decodedText: string) => {
       if (scannedResult) return; // Prevent duplicate scan events
@@ -87,7 +91,9 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
       // 2. Stop camera scanner
       if (scannerRef.current) {
         try {
-          await scannerRef.current.stop();
+          if (scannerRef.current.isScanning) {
+            await scannerRef.current.stop();
+          }
         } catch {
           // ignore stop error
         }
@@ -119,7 +125,11 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
         }
       }
       // Case B: Relative link
-      else if (text.startsWith("/location/") || text.startsWith("/digipin/") || text.startsWith("/convert")) {
+      else if (
+        text.startsWith("/location/") ||
+        text.startsWith("/digipin/") ||
+        text.startsWith("/convert")
+      ) {
         targetPath = text;
       }
       // Case C: Raw 10-char DIGIPIN code (e.g. 4T396F42L7)
@@ -210,6 +220,7 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
   useEffect(() => {
     if (!isOpen) return;
     setScannedResult(null);
+    setManualPin("");
 
     // Prefer environment back camera
     const timer = setTimeout(() => {
@@ -261,27 +272,15 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
     }
   };
 
-  // Scan QR from image file (purely client-side in browser memory, zero server upload, immediate memory deletion)
-  const handleFileScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      if (!scannerRef.current) {
-        scannerRef.current = new Html5Qrcode(readerId);
-      }
-      // scanFile runs purely in-browser on an internal canvas
-      const text = await scannerRef.current.scanFile(file, true);
-
-      // Immediately purge file input from DOM and memory
-      e.target.value = "";
-
-      handleScanSuccess(text);
-    } catch {
-      // Purge on error as well
-      e.target.value = "";
-      toast.error("No valid QR code detected in this image. Try another photo.");
+  // Manual DIGIPIN Form Submit
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = manualPin.trim().toUpperCase();
+    if (!clean) {
+      toast.error("Please enter a DIGIPIN code or location URL.");
+      return;
     }
+    handleScanSuccess(clean);
   };
 
   if (!isOpen) return null;
@@ -303,15 +302,6 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
         animation: "fadeIn 0.2s ease",
       }}
     >
-      {/* Hidden file picker for gallery scan fallback */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        style={{ display: "none" }}
-        onChange={handleFileScan}
-      />
-
       <div
         onClick={(e) => e.stopPropagation()}
         className="card"
@@ -328,6 +318,8 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
           gap: "1rem",
           position: "relative",
           borderRadius: "var(--radius)",
+          maxHeight: "90vh",
+          overflowY: "auto",
         }}
       >
         {/* Header */}
@@ -358,7 +350,7 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
 
         {/* Status Subtitle */}
         <p className="text-muted text-xs" style={{ margin: 0, textAlign: "center", lineHeight: 1.5 }}>
-          Point your camera at a doorstep QR code to instantly navigate with vibration &amp; chime.
+          Point your device camera at a doorstep QR code to instantly navigate.
         </p>
 
         {/* ── Viewfinder Video Box ── */}
@@ -366,7 +358,7 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
           style={{
             width: "100%",
             position: "relative",
-            minHeight: 280,
+            minHeight: 260,
             borderRadius: "var(--radius-sm)",
             overflow: "hidden",
             background: "#0a0a0a",
@@ -382,7 +374,7 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
             style={{
               width: "100%",
               height: "100%",
-              minHeight: 280,
+              minHeight: 260,
             }}
           />
 
@@ -426,8 +418,8 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
               {/* Center Target Box */}
               <div
                 style={{
-                  width: 200,
-                  height: 200,
+                  width: 190,
+                  height: 190,
                   position: "relative",
                   boxShadow: "0 0 0 9999px rgba(0,0,0,0.45)",
                 }}
@@ -531,10 +523,10 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
               </div>
               <div>
                 <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#fff", margin: "0 0 0.25rem" }}>
-                  Camera Access Required
+                  Live Camera Feed
                 </p>
                 <p className="text-muted text-xs" style={{ margin: 0, lineHeight: 1.4 }}>
-                  Please grant camera permission in your browser or select an image file from your gallery below.
+                  Camera access inactive. You can retry permission or enter the DIGIPIN code manually below.
                 </p>
               </div>
               <button
@@ -550,8 +542,8 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
           )}
         </div>
 
-        {/* ── Controls Bar ── */}
-        <div style={{ width: "100%", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        {/* ── Camera Controls Bar ── */}
+        <div style={{ width: "100%", display: "flex", gap: "0.5rem" }}>
           {/* Flip / Switch Camera Button */}
           <button
             type="button"
@@ -577,18 +569,38 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
               <Flashlight size={14} />
             </button>
           )}
+        </div>
 
-          {/* Gallery / File Image Scan */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="btn btn-outline btn-sm"
-            style={{ flex: 1, justifyContent: "center", fontSize: "0.78rem", padding: "0.45rem" }}
-            title="Scan QR code from saved photo in gallery"
+        {/* ── Manual DIGIPIN Input Fallback ── */}
+        <div style={{ width: "100%", borderTop: "1px solid var(--border)", paddingTop: "0.75rem" }}>
+          <form
+            onSubmit={handleManualSubmit}
+            style={{ display: "flex", gap: "0.4rem", width: "100%" }}
           >
-            <Upload size={13} />
-            <span>Scan from Gallery</span>
-          </button>
+            <input
+              type="text"
+              value={manualPin}
+              onChange={(e) => setManualPin(e.target.value)}
+              placeholder="Or enter 10-char DIGIPIN code…"
+              maxLength={40}
+              className="input input-sm"
+              style={{
+                flex: 1,
+                fontSize: "0.78rem",
+                padding: "0.4rem 0.65rem",
+                fontFamily: "monospace",
+                textTransform: "uppercase",
+              }}
+            />
+            <button
+              type="submit"
+              className="btn btn-primary btn-sm"
+              style={{ fontSize: "0.78rem", padding: "0.4rem 0.75rem" }}
+            >
+              <span>Go</span>
+              <ArrowRight size={13} />
+            </button>
+          </form>
         </div>
 
         {/* Feature Highlights */}
@@ -598,7 +610,7 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: "1rem",
+            gap: "0.85rem",
             fontSize: "0.72rem",
             color: "var(--muted)",
           }}
@@ -610,7 +622,7 @@ export default function DigiRouteQRScannerModal({ isOpen, onClose }: Props) {
           <span>•</span>
           <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
             <Sparkles size={12} className="text-orange" />
-            Haptic Vibration
+            Vibration
           </span>
           <span>•</span>
           <span>Instant Redirect</span>
