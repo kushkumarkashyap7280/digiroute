@@ -10,9 +10,11 @@ import {
   ArrowRight,
   ChevronDown,
   Sparkles,
+  QrCode,
 } from "lucide-react";
 import ParticleBackground from "@/components/ParticleBackground";
 import TypewriterTagline from "@/components/TypewriterTagline";
+import DigiRouteQRScannerModal from "@/components/DigiRouteQRScannerModal";
 
 // FAQs data
 const FAQS = [
@@ -41,6 +43,7 @@ const FAQS = [
 export default function HomeClient() {
   // FAQ accordion state (all closed initially, only 1 open at a time)
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
 
   const toggleFaq = (index: number) => {
     setActiveFaq((prev) => (prev === index ? null : index));
@@ -56,7 +59,7 @@ export default function HomeClient() {
         style={{
           position: "relative",
           zIndex: 1,
-          padding: "5rem 1rem 4rem",
+          padding: "4.5rem 1rem 3.5rem",
           maxWidth: 950,
           margin: "0 auto",
           textAlign: "center",
@@ -124,32 +127,54 @@ export default function HomeClient() {
           directly to your doorstep on Google Maps.
         </motion.p>
 
-        {/* Single Primary Action + Secondary Action */}
+        {/* Action Buttons: Try Compass + Scan QR Pass + Create Address Card */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
           style={{ display: "flex", gap: "0.85rem", justifyContent: "center", flexWrap: "wrap" }}
         >
+          {/* Primary Compass Button */}
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
             <Link
               href="/convert"
               className="btn btn-primary"
               id="try-compass-btn"
-              style={{ fontSize: "0.95rem", padding: "0.75rem 1.6rem" }}
+              style={{ fontSize: "0.92rem", padding: "0.75rem 1.4rem" }}
             >
               <Compass size={16} />
-              <span>Try DigiRoute Compass</span>
+              <span>DigiRoute Compass</span>
               <ArrowRight size={15} />
             </Link>
           </motion.div>
 
+          {/* QR Scanner Direct Action */}
+          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+            <button
+              type="button"
+              onClick={() => setShowScanner(true)}
+              className="btn btn-outline"
+              id="hero-scan-qr-btn"
+              style={{
+                fontSize: "0.92rem",
+                padding: "0.75rem 1.4rem",
+                border: "1.5px solid rgba(249,115,22,0.6)",
+                background: "rgba(249,115,22,0.08)",
+                color: "var(--text)",
+              }}
+            >
+              <QrCode size={16} className="text-orange" />
+              <span>Scan QR Pass</span>
+            </button>
+          </motion.div>
+
+          {/* Create Address Card Action */}
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
             <Link
               href="/signup"
               className="btn btn-outline"
               id="hero-signup-btn"
-              style={{ fontSize: "0.95rem", padding: "0.75rem 1.6rem" }}
+              style={{ fontSize: "0.92rem", padding: "0.75rem 1.4rem" }}
             >
               <Camera size={15} />
               <span>Create Address Card</span>
@@ -382,6 +407,14 @@ export default function HomeClient() {
           })}
         </div>
       </section>
+
+      {/* ── QR Scanner Modal Component ── */}
+      {showScanner && (
+        <DigiRouteQRScannerModal
+          isOpen={showScanner}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </div>
   );
 }

@@ -448,3 +448,15 @@ p  { color: var(--text-secondary); }
   .digipin-badge { font-size: 0.85rem; padding: 0.25rem 0.5rem; }
   .form-input { font-size: 16px; /* prevent iOS autozoom */ }
 }
+
+/* Photo Thumbnail & Lightbox */
+.photo-thumbnail-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  border-color: var(--orange) !important;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

@@ -1,25 +1,13 @@
 /**
- * DELETE /api/cards/[id]
- * Deletes the card (owner only) and purges its Cloudinary assets if photoIds are present.
+ * DELETE /api/cards/[id]  → Deletes card & cleans up Cloudinary images
+ * PUT    /api/cards/[id]  → Updates card & purges replaced Cloudinary images
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { getSession } from "@/lib/session";
 import AddressCard from "@/models/AddressCard";
-import { v2 as cloudinary } from "cloudinary";
-
-// Cloudinary is configured lazily — no crash if env vars are missing during dev
-function configureCloudinary() {
-  if (process.env.CLOUDINARY_CLOUD_NAME) {
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key:    process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-      secure:     true,
-    });
-  }
-}
+import { deleteCloudinaryImages } from "@/lib/cloudinary";
 
 export async function DELETE(
   _req: NextRequest,
@@ -39,14 +27,9 @@ export async function DELETE(
   if (card.ownerId.toString() !== session.userId)
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
 
-  // Purge Cloudinary assets (best-effort — don't fail the delete if Cloudinary is unavailable)
+  // Purge all Cloudinary assets associated with this card
   if (card.photoIds && card.photoIds.length > 0) {
-    try {
-      configureCloudinary();
-      await Promise.all(card.photoIds.map((pid: string) => cloudinary.uploader.destroy(pid)));
-    } catch (e) {
-      console.warn("[DELETE /api/cards] Cloudinary cleanup failed:", e);
-    }
+    await deleteCloudinaryImages(card.photoIds);
   }
 
   await card.deleteOne();
@@ -73,6 +56,15 @@ export async function PUT(
 
     if (card.ownerId.toString() !== session.userId)
       return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+
+    // If new photos are being set, delete previous photos from Cloudinary that are being replaced
+    if (photoIds !== undefined && card.photoIds && card.photoIds.length > 0) {
+      const incomingIds = Array.isArray(photoIds) ? photoIds : [];
+      const oldIdsToDelete = card.photoIds.filter((pid: string) => !incomingIds.includes(pid));
+      if (oldIdsToDelete.length > 0) {
+        await deleteCloudinaryImages(oldIdsToDelete);
+      }
+    }
 
     if (title !== undefined) card.title = title.trim();
     if (humanAddress !== undefined) card.humanAddress = humanAddress.trim();

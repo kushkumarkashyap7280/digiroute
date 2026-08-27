@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Upload, X, Image as ImageIcon, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Upload, X, Image as ImageIcon, AlertCircle, CheckCircle2, Camera } from "lucide-react";
 import { toast } from "sonner";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -11,12 +11,14 @@ interface Props {
   files: File[];
   onChange: (files: File[]) => void;
   disabled?: boolean;
+  maxFiles?: number;
 }
 
-export default function ImageDropzone({ files, onChange, disabled }: Props) {
+export default function ImageDropzone({ files, onChange, disabled, maxFiles = 2 }: Props) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState<string>("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const processFiles = (newFiles: File[]) => {
     setError("");
@@ -24,10 +26,10 @@ export default function ImageDropzone({ files, onChange, disabled }: Props) {
 
     // Check count limit
     const totalFiles = [...files, ...newFiles];
-    if (totalFiles.length > 2) {
-      toast.warning("Maximum 2 entrance photos allowed.");
+    if (totalFiles.length > maxFiles) {
+      toast.warning(`Maximum ${maxFiles} entrance photo${maxFiles > 1 ? "s" : ""} allowed.`);
     }
-    const limited = newFiles.slice(0, 2 - files.length);
+    const limited = newFiles.slice(0, Math.max(0, maxFiles - files.length));
 
     // Validate size and format
     const valid: File[] = [];
@@ -52,7 +54,7 @@ export default function ImageDropzone({ files, onChange, disabled }: Props) {
     }
 
     if (valid.length > 0) {
-      onChange([...files, ...valid].slice(0, 2));
+      onChange([...files, ...valid].slice(0, maxFiles));
     }
   };
 
@@ -70,8 +72,40 @@ export default function ImageDropzone({ files, onChange, disabled }: Props) {
     setError("");
   };
 
+  const isFull = files.length >= maxFiles;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+      {/* Hidden file input for Gallery selection */}
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/jpg,image/webp"
+        multiple
+        disabled={disabled || isFull}
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const selected = Array.from(e.target.files ?? []);
+          processFiles(selected);
+          e.target.value = "";
+        }}
+      />
+
+      {/* Hidden file input for Direct Camera capture */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        disabled={disabled || isFull}
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const selected = Array.from(e.target.files ?? []);
+          processFiles(selected);
+          e.target.value = "";
+        }}
+      />
+
       {/* Dropzone container */}
       <div
         onDragOver={(e) => {
@@ -80,66 +114,69 @@ export default function ImageDropzone({ files, onChange, disabled }: Props) {
         }}
         onDragLeave={() => setIsDragOver(false)}
         onDrop={handleDrop}
-        onClick={() => {
-          if (!disabled && files.length < 2 && inputRef.current) {
-            inputRef.current.click();
-          }
-        }}
         style={{
           border: isDragOver
             ? "2px dashed var(--orange)"
-            : files.length >= 2
+            : isFull
             ? "2px dashed var(--border)"
             : "2px dashed rgba(249,115,22,0.4)",
           background: isDragOver
             ? "var(--orange-subtle)"
             : "var(--surface2)",
           borderRadius: "var(--radius-sm)",
-          padding: "1.25rem 1rem",
+          padding: "1rem",
           textAlign: "center",
-          cursor: disabled || files.length >= 2 ? "default" : "pointer",
           transition: "all 0.2s ease",
           position: "relative",
         }}
       >
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/jpg,image/webp"
-          multiple
-          disabled={disabled || files.length >= 2}
-          style={{ display: "none" }}
-          onChange={(e) => {
-            const selected = Array.from(e.target.files ?? []);
-            processFiles(selected);
-            e.target.value = "";
-          }}
-        />
-
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.4rem" }}>
-          <div
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: "50%",
-              background: "var(--orange-subtle)",
-              color: "var(--orange)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Upload size={18} />
-          </div>
-
-          <p style={{ fontSize: "0.85rem", fontWeight: 700, margin: 0 }}>
-            {files.length >= 2
-              ? "Maximum 2 photos selected"
-              : "Drag & drop entrance photos here, or click to browse"}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.6rem" }}>
+          <p style={{ fontSize: "0.84rem", fontWeight: 700, margin: 0 }}>
+            {isFull
+              ? `Maximum ${maxFiles} photo${maxFiles > 1 ? "s" : ""} selected`
+              : "Add Doorstep Entrance Photo"}
           </p>
 
-          <p className="text-muted" style={{ fontSize: "0.74rem", margin: 0 }}>
-            Supports PNG, JPG, JPEG, WebP · Max 2MB per photo · Up to 2 files
+          {!isFull && (
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
+              {/* Direct Camera Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!disabled && cameraInputRef.current) {
+                    cameraInputRef.current.click();
+                  }
+                }}
+                disabled={disabled}
+                className="btn btn-primary btn-sm"
+                style={{ fontSize: "0.8rem", padding: "0.4rem 0.8rem", display: "flex", alignItems: "center", gap: "0.35rem" }}
+              >
+                <Camera size={15} />
+                <span>Take Photo (Camera)</span>
+              </button>
+
+              {/* Gallery / File Picker Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!disabled && galleryInputRef.current) {
+                    galleryInputRef.current.click();
+                  }
+                }}
+                disabled={disabled}
+                className="btn btn-outline btn-sm"
+                style={{ fontSize: "0.8rem", padding: "0.4rem 0.8rem", display: "flex", alignItems: "center", gap: "0.35rem" }}
+              >
+                <Upload size={15} />
+                <span>Choose from Gallery</span>
+              </button>
+            </div>
+          )}
+
+          <p className="text-muted" style={{ fontSize: "0.72rem", margin: 0 }}>
+            {isFull
+              ? "Remove a photo below to add or snap a new one."
+              : `Or drag & drop files here · PNG, JPG, JPEG, WebP · Max 2MB (Up to ${maxFiles} file${maxFiles > 1 ? "s" : ""})`}
           </p>
         </div>
       </div>

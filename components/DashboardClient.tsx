@@ -22,40 +22,20 @@ import {
   CheckCircle2,
   Navigation,
   Pencil,
+  Image as ImageIcon,
+  QrCode as QrCodeIcon,
 } from "lucide-react";
+import { uploadToCloudinary, getThumbnailUrl } from "@/lib/cloudinaryClient";
+import DigiRouteQRCodeModal from "@/components/DigiRouteQRCodeModal";
 
 interface Card {
   _id: string;
   digipin: string;
   title: string;
   photoUrls: string[];
+  photoIds?: string[];
   humanAddress: string;
   createdAt: string;
-}
-
-// ── Cloudinary direct-upload helper ─────────────────────────────────────────
-async function uploadToCloudinary(file: File): Promise<{ url: string; public_id: string }> {
-  const signRes = await fetch("/api/upload/sign", { method: "POST" });
-  if (!signRes.ok) {
-    const d = await signRes.json();
-    throw new Error(d.error ?? "Failed to get upload signature.");
-  }
-  const { timestamp, signature, folder, api_key, cloud_name } = await signRes.json();
-
-  const fd = new FormData();
-  fd.append("file", file);
-  fd.append("timestamp", String(timestamp));
-  fd.append("signature", signature);
-  fd.append("api_key", api_key);
-  fd.append("folder", folder);
-
-  const uploadRes = await fetch(
-    `https://api.cloudinary.com/v1_1/${cloud_name}/image/upload`,
-    { method: "POST", body: fd }
-  );
-  if (!uploadRes.ok) throw new Error("Cloudinary upload failed.");
-  const result = await uploadRes.json();
-  return { url: result.secure_url, public_id: result.public_id };
 }
 
 // ── TanStack Query fetcher function (10 at a time, cursor-based) ───────────
@@ -99,10 +79,12 @@ function DashboardContent({ userName }: { userName: string }) {
   // Local card action states
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [qrCardData, setQrCardData] = useState<{ url: string; digipin: string; title: string; humanAddress?: string } | null>(null);
 
   // Edit / Update card state
   const [editingCard, setEditingCard] = useState<Card | null>(null);
   const [editForm, setEditForm] = useState({ title: "", humanAddress: "", digipin: "" });
+  const [existingPhotos, setExistingPhotos] = useState<{ url: string; id?: string }[]>([]);
   const [editPhotos, setEditPhotos] = useState<File[]>([]);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [updateError, setUpdateError] = useState("");
@@ -134,8 +116,19 @@ function DashboardContent({ userName }: { userName: string }) {
       humanAddress: card.humanAddress || "",
       digipin: card.digipin,
     });
+    const mapped = (card.photoUrls || []).map((url, i) => ({
+      url,
+      id: card.photoIds?.[i],
+    }));
+    setExistingPhotos(mapped);
     setEditPhotos([]);
     setUpdateError("");
+  };
+
+  // ── Remove an existing photo from the editing card ────────────────────────
+  const handleRemoveExistingPhoto = (indexToRemove: number) => {
+    setExistingPhotos((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+    toast.info("Photo removed from card. Click 'Save Changes' to apply.");
   };
 
   // ── Submit Update Card ───────────────────────────────────────────────────
@@ -151,19 +144,24 @@ function DashboardContent({ userName }: { userName: string }) {
       return;
     }
 
+    const totalCount = existingPhotos.length + editPhotos.length;
+    if (totalCount > 2) {
+      setUpdateError("Maximum 2 entrance photos allowed in total.");
+      return;
+    }
+
     setUpdateError("");
     setUpdateLoading(true);
 
     try {
-      let photoUrls = editingCard.photoUrls;
-      let photoIds: string[] = [];
+      const finalUrls: string[] = existingPhotos.map((p) => p.url);
+      const finalIds: string[] = existingPhotos.map((p) => p.id).filter(Boolean) as string[];
 
       if (editPhotos.length > 0) {
-        photoUrls = [];
         for (const file of editPhotos) {
           const { url, public_id } = await uploadToCloudinary(file);
-          photoUrls.push(url);
-          photoIds.push(public_id);
+          finalUrls.push(url);
+          finalIds.push(public_id);
         }
       }
 
@@ -174,14 +172,15 @@ function DashboardContent({ userName }: { userName: string }) {
           title: editForm.title.trim(),
           humanAddress: editForm.humanAddress.trim(),
           digipin: editForm.digipin.trim().toUpperCase(),
-          ...(editPhotos.length > 0 ? { photoUrls, photoIds } : {}),
+          photoUrls: finalUrls,
+          photoIds: finalIds,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to update card.");
 
-      toast.success("Address card updated successfully!");
+      toast.success("Address card and photos updated successfully!");
       setEditingCard(null);
       queryClient.invalidateQueries({ queryKey: ["cards"] });
     } catch (e: unknown) {
@@ -377,6 +376,8 @@ function DashboardContent({ userName }: { userName: string }) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const remainingPhotoSlots = Math.max(0, 2 - existingPhotos.length);
+
   return (
     <main style={{ maxWidth: 1060, margin: "0 auto", padding: "1.5rem 0.75rem 4rem", width: "100%" }}>
       {/* ── Header ───────────────────────────── */}
@@ -422,15 +423,15 @@ function DashboardContent({ userName }: { userName: string }) {
         </button>
       </div>
 
-      {/* ── Edit / Update Card Modal ────────────── */}
+      {/* ── Edit / Update Card Modal with Image Update & Delete Controls ── */}
       {editingCard && (
         <div
           style={{
             position: "fixed",
             inset: 0,
             zIndex: 1000,
-            background: "rgba(0,0,0,0.75)",
-            backdropFilter: "blur(4px)",
+            background: "rgba(0,0,0,0.78)",
+            backdropFilter: "blur(6px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -441,17 +442,17 @@ function DashboardContent({ userName }: { userName: string }) {
             className="card"
             style={{
               width: "100%",
-              maxWidth: 480,
-              maxHeight: "90vh",
+              maxWidth: 500,
+              maxHeight: "92vh",
               overflowY: "auto",
               border: "1.5px solid rgba(249,115,22,0.45)",
-              padding: "1.25rem 1rem",
+              padding: "1.25rem 1.1rem",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
               <h3 style={{ fontSize: "1.1rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.4rem" }}>
                 <Pencil size={16} className="text-orange" />
-                <span>Update Address Card</span>
+                <span>Update Address Card & Photos</span>
               </h3>
               <button
                 onClick={() => setEditingCard(null)}
@@ -469,7 +470,7 @@ function DashboardContent({ userName }: { userName: string }) {
               </div>
             )}
 
-            <form onSubmit={handleUpdateSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+            <form onSubmit={handleUpdateSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
               <div className="form-group">
                 <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 600 }}>Title *</label>
                 <input
@@ -509,9 +510,93 @@ function DashboardContent({ userName }: { userName: string }) {
                 />
               </div>
 
+              {/* ── Existing Entrance Photos with Delete Buttons ── */}
+              {existingPhotos.length > 0 && (
+                <div className="form-group">
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.4rem" }}>
+                    <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 600, margin: 0 }}>
+                      Current Entrance Photos ({existingPhotos.length}/2)
+                    </label>
+                    <span className="text-muted" style={{ fontSize: "0.72rem" }}>
+                      Click Delete to remove image
+                    </span>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "0.5rem" }}>
+                    {existingPhotos.map((p, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          position: "relative",
+                          height: 100,
+                          borderRadius: "var(--radius-sm)",
+                          overflow: "hidden",
+                          border: "1px solid var(--border)",
+                          background: "var(--surface2)",
+                        }}
+                      >
+                        <Image
+                          src={getThumbnailUrl(p.url, 200, 140)}
+                          alt={`Current Photo ${idx + 1}`}
+                          fill
+                          sizes="180px"
+                          style={{ objectFit: "cover" }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveExistingPhoto(idx)}
+                          disabled={updateLoading}
+                          style={{
+                            position: "absolute",
+                            top: 5,
+                            right: 5,
+                            background: "rgba(239, 68, 68, 0.92)",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "var(--radius-xs)",
+                            padding: "0.25rem 0.5rem",
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.25rem",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
+                          }}
+                          title="Delete this image"
+                        >
+                          <Trash2 size={11} />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Add New Photos (Only if slots remain) ── */}
               <div className="form-group">
-                <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 600 }}>New Entrance Photos (optional · max 2 · 2MB limit)</label>
-                <ImageDropzone files={editPhotos} onChange={setEditPhotos} disabled={updateLoading} />
+                <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 600, display: "flex", justifyContent: "space-between" }}>
+                  <span>
+                    {existingPhotos.length === 0
+                      ? "Add Entrance Photos (max 2 · 2MB limit)"
+                      : remainingPhotoSlots > 0
+                      ? `Add More Photos (${remainingPhotoSlots} slot remaining)`
+                      : "Photo Limit Reached (2/2)"}
+                  </span>
+                </label>
+                {remainingPhotoSlots > 0 ? (
+                  <ImageDropzone
+                    files={editPhotos}
+                    onChange={setEditPhotos}
+                    disabled={updateLoading}
+                    maxFiles={remainingPhotoSlots}
+                  />
+                ) : (
+                  <p className="text-muted text-xs" style={{ margin: 0, padding: "0.5rem", background: "var(--surface2)", borderRadius: "var(--radius-xs)" }}>
+                    Maximum 2 photos reached. Click &apos;Delete&apos; on an image above to replace it.
+                  </p>
+                )}
               </div>
 
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
@@ -533,7 +618,7 @@ function DashboardContent({ userName }: { userName: string }) {
                   {updateLoading ? (
                     <>
                       <Loader2 size={14} className="spinner" />
-                      <span>Updating…</span>
+                      <span>Saving…</span>
                     </>
                   ) : (
                     <span>Save Changes</span>
@@ -873,7 +958,7 @@ function DashboardContent({ userName }: { userName: string }) {
                 {card.photoUrls && card.photoUrls[0] ? (
                   <div className="address-card__photo" style={{ height: 130 }}>
                     <Image
-                      src={card.photoUrls[0]}
+                      src={getThumbnailUrl(card.photoUrls[0], 360, 220)}
                       alt={card.title}
                       fill
                       sizes="(max-width: 768px) 100vw, 300px"
@@ -908,7 +993,7 @@ function DashboardContent({ userName }: { userName: string }) {
                     onClick={() => handleOpenEdit(card)}
                     className="btn btn-outline btn-icon"
                     style={{ padding: "0.35rem 0.5rem" }}
-                    title="Update card"
+                    title="Update card & photos"
                   >
                     <Pencil size={13} />
                   </button>
@@ -923,6 +1008,21 @@ function DashboardContent({ userName }: { userName: string }) {
                     ) : (
                       <Copy size={13} />
                     )}
+                  </button>
+                  <button
+                    onClick={() =>
+                      setQrCardData({
+                        url: `${window.location.origin}/location/${card._id}`,
+                        digipin: card.digipin,
+                        title: card.title,
+                        humanAddress: card.humanAddress,
+                      })
+                    }
+                    className="btn btn-outline btn-icon"
+                    style={{ padding: "0.35rem 0.5rem" }}
+                    title="Generate QR Pass"
+                  >
+                    <QrCodeIcon size={13} />
                   </button>
                   <button
                     onClick={() => deleteCard(card._id)}
@@ -969,6 +1069,81 @@ function DashboardContent({ userName }: { userName: string }) {
             {hasNextPage ? " — click load more for next 10 cards" : " — all cards loaded"}
           </p>
         </>
+      )}
+
+      {/* ── DigiRoute QR Code Pass Modal ── */}
+      {qrCardData && (
+        <DigiRouteQRCodeModal
+          isOpen={Boolean(qrCardData)}
+          onClose={() => setQrCardData(null)}
+          url={qrCardData.url}
+          digipin={qrCardData.digipin}
+          title={qrCardData.title}
+          humanAddress={qrCardData.humanAddress}
+          isAuthenticated={true}
+        />
+      )}
+
+      {/* ── Fullscreen Frosted Blur Loading Overlay during Card Actions ── */}
+      {(updateLoading || submitLoading || deletingId) && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100000,
+            background: "rgba(0,0,0,0.72)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.5rem",
+            animation: "fadeIn 0.2s ease",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "1rem",
+              background: "rgba(28,28,28,0.9)",
+              border: "1.5px solid rgba(249,115,22,0.45)",
+              padding: "2rem 2.5rem",
+              borderRadius: "var(--radius)",
+              boxShadow: "0 20px 50px rgba(0,0,0,0.75)",
+              textAlign: "center",
+              maxWidth: "min(380px, 90vw)",
+            }}
+          >
+            <div
+              style={{
+                width: 58,
+                height: 58,
+                borderRadius: "50%",
+                background: "var(--orange-subtle)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Loader2 size={32} className="spinner text-orange" />
+            </div>
+            <div>
+              <p style={{ color: "#fff", fontSize: "1.05rem", fontWeight: 700, margin: "0 0 0.35rem" }}>
+                {updateLoading
+                  ? "Updating address card & photos…"
+                  : submitLoading
+                  ? (submitStep || "Saving address card…")
+                  : "Deleting address card…"}
+              </p>
+              <p className="text-muted text-xs" style={{ margin: 0, lineHeight: 1.5 }}>
+                Please wait while your changes are securely synchronized.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

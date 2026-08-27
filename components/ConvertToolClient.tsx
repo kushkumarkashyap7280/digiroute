@@ -16,10 +16,12 @@ import {
   Loader2,
   AlertCircle,
   Sparkles,
-  ArrowRight,
   Globe2,
   Share2,
+  QrCode as QrCodeIcon,
+  ArrowRight,
 } from "lucide-react";
+import DigiRouteQRCodeModal from "@/components/DigiRouteQRCodeModal";
 
 const MapPin = dynamic(() => import("@/components/MapPin"), { ssr: false });
 
@@ -46,6 +48,7 @@ export default function ConvertToolClient() {
   const [copiedPin, setCopiedPin] = useState(false);
   const [copiedCoords, setCopiedCoords] = useState(false);
   const [copiedMapLink, setCopiedMapLink] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   // ── Mode 1: GPS Capture ──────────────────────────────────────────────────
   const handleGPSCapture = () => {
@@ -588,11 +591,11 @@ export default function ConvertToolClient() {
                   <ExternalLink size={13} />
                 </a>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", width: "100%" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.4rem", width: "100%" }}>
                   <Link
                     href={`/digipin/${result.digipin}`}
                     className="btn btn-outline btn-sm"
-                    style={{ padding: "0.6rem 0.5rem", fontSize: "0.78rem", justifyContent: "center" }}
+                    style={{ padding: "0.55rem 0.35rem", fontSize: "0.76rem", justifyContent: "center" }}
                   >
                     <Compass size={13} />
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Public View</span>
@@ -600,24 +603,47 @@ export default function ConvertToolClient() {
 
                   <button
                     type="button"
+                    onClick={() => setShowQrModal(true)}
+                    className="btn btn-outline btn-sm"
+                    style={{ padding: "0.55rem 0.35rem", fontSize: "0.76rem", justifyContent: "center" }}
+                    title="Generate printable QR Code"
+                  >
+                    <QrCodeIcon size={13} />
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>QR Code</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={copyMapLink}
                     className="btn btn-outline btn-sm"
-                    style={{ padding: "0.6rem 0.5rem", fontSize: "0.78rem", justifyContent: "center" }}
+                    style={{ padding: "0.55rem 0.35rem", fontSize: "0.76rem", justifyContent: "center" }}
                   >
                     {copiedMapLink ? (
                       <>
                         <Check size={13} style={{ color: "var(--success)" }} />
-                        <span>Link Copied</span>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Copied</span>
                       </>
                     ) : (
                       <>
                         <Share2 size={13} />
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Copy Link</span>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Share Link</span>
                       </>
                     )}
                   </button>
                 </div>
               </div>
+
+              {/* QR Code Modal for Compass Location */}
+              {showQrModal && result && (
+                <DigiRouteQRCodeModal
+                  isOpen={showQrModal}
+                  onClose={() => setShowQrModal(false)}
+                  url={typeof window !== "undefined" ? `${window.location.origin}/digipin/${result.digipin}` : `/digipin/${result.digipin}`}
+                  digipin={result.digipin}
+                  title="DigiRoute Location"
+                  humanAddress={`${result.lat.toFixed(6)}, ${result.lon.toFixed(6)}`}
+                />
+              )}
 
               {/* Upgrade to full entrance card banner */}
               <div

@@ -12,15 +12,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { v2 as cloudinary } from "cloudinary";
 import { getSession } from "@/lib/session";
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME ?? "",
-  api_key:    process.env.CLOUDINARY_API_KEY    ?? "",
-  api_secret: process.env.CLOUDINARY_API_SECRET ?? "",
-  secure:     true,
-});
+import { configureCloudinary } from "@/lib/cloudinary";
 
 export async function POST() {
   const session = await getSession();
@@ -38,7 +31,8 @@ export async function POST() {
 
   // Sign only the restricted params — api_secret never leaves the server
   const paramsToSign = { timestamp, folder };
-  const signature = cloudinary.utils.api_sign_request(paramsToSign, process.env.CLOUDINARY_API_SECRET!);
+  const c = configureCloudinary();
+  const signature = c.utils.api_sign_request(paramsToSign, process.env.CLOUDINARY_API_SECRET!);
 
   return NextResponse.json({
     timestamp,

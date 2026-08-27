@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { connectDB } from "@/lib/mongoose";
 import AddressCard from "@/models/AddressCard";
 import { getLatLngFromDigiPin } from "@/lib/digipin";
+import { getSession } from "@/lib/session";
 import LocationCardView from "@/components/LocationCardView";
 
 interface Props {
@@ -57,6 +58,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function LocationPage({ params }: Props) {
   const { id } = await params;
+  const session = await getSession();
 
   let cardData: {
     _id: string;
@@ -64,7 +66,9 @@ export default async function LocationPage({ params }: Props) {
     title: string;
     humanAddress?: string;
     photoUrls?: string[];
+    photoIds?: string[];
     createdAt?: string;
+    isOwner?: boolean;
   } | null = null;
 
   let coords: { latitude: string; longitude: string } | null = null;
@@ -75,20 +79,26 @@ export default async function LocationPage({ params }: Props) {
     if (doc) {
       const d = doc as {
         _id: unknown;
+        ownerId: unknown;
         digipin: string;
         title: string;
         humanAddress?: string;
         photoUrls?: string[];
+        photoIds?: string[];
         createdAt?: Date;
       };
+
+      const isOwner = !!(session && String(d.ownerId) === session.userId);
 
       cardData = {
         _id: String(d._id),
         digipin: d.digipin,
         title: d.title,
         humanAddress: d.humanAddress,
-        photoUrls: d.photoUrls,
+        photoUrls: d.photoUrls ?? [],
+        photoIds: d.photoIds ?? [],
         createdAt: d.createdAt ? d.createdAt.toISOString() : undefined,
+        isOwner,
       };
 
       coords = getLatLngFromDigiPin(d.digipin);

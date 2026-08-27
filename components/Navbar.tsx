@@ -19,13 +19,16 @@ import {
   Home,
   MapPin,
   ChevronRight,
+  QrCode as QrCodeIcon,
 } from "lucide-react";
+import DigiRouteQRScannerModal from "@/components/DigiRouteQRScannerModal";
 
 export default function Navbar() {
   const { user, loading, logout } = useAuth();
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [showNavScanner, setShowNavScanner] = useState(false);
   const pathname = usePathname();
 
   // Close mobile menu on route change
@@ -103,6 +106,17 @@ export default function Navbar() {
             <Compass size={14} className="text-orange" />
             <span>DigiRoute Compass</span>
           </Link>
+
+          <button
+            type="button"
+            onClick={() => setShowNavScanner(true)}
+            className="btn btn-ghost btn-sm"
+            id="nav-scan-qr"
+            title="Scan Doorstep QR Code Pass"
+          >
+            <QrCodeIcon size={14} className="text-orange" />
+            <span>Scan QR</span>
+          </button>
 
           {/* Theme toggle */}
           <button
@@ -252,6 +266,22 @@ export default function Navbar() {
                 <ChevronRight size={15} className="text-muted" />
               </Link>
 
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setShowNavScanner(true);
+                }}
+                className="btn btn-outline w-full"
+                style={{ justifyContent: "space-between", padding: "0.65rem 1rem", fontSize: "0.9rem" }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                  <QrCodeIcon size={16} className="text-orange" />
+                  <span>Scan QR Pass</span>
+                </div>
+                <ChevronRight size={15} className="text-muted" />
+              </button>
+
               {user ? (
                 <>
                   <Link
@@ -289,6 +319,14 @@ export default function Navbar() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* QR Scanner Modal from Navbar */}
+      {showNavScanner && (
+        <DigiRouteQRScannerModal
+          isOpen={showNavScanner}
+          onClose={() => setShowNavScanner(false)}
+        />
+      )}
     </nav>
   );
 }
