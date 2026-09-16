@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   User,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import DigiRouteQRScannerModal from "@/components/DigiRouteQRScannerModal";
 
@@ -109,6 +110,15 @@ export default function Footer() {
               <Link href="/about" className="text-muted hover:text-orange" style={{ transition: "color 0.2s" }}>
                 About DigiRoute
               </Link>
+              <a
+                href="https://github.com/kushkumarkashyap7280/digiroutes_app/releases/latest/download/app-release.apk"
+                download="digiroutes.apk"
+                className="text-muted hover:text-orange"
+                style={{ transition: "color 0.2s", display: "flex", alignItems: "center", gap: "0.35rem" }}
+              >
+                <Download size={13} className="text-orange" />
+                <span>Download Android App</span>
+              </a>
             </nav>
           </div>
 

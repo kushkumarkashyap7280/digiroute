@@ -11,12 +11,12 @@
  * Requires: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET in .env.local
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { configureCloudinary } from "@/lib/cloudinary";
 
-export async function POST() {
-  const session = await getSession();
+export async function POST(req: NextRequest) {
+  const session = await getSession(req);
   if (!session) return NextResponse.json({ error: "Unauthorised." }, { status: 401 });
 
   if (!process.env.CLOUDINARY_CLOUD_NAME) {

@@ -21,9 +21,18 @@ export async function POST(req: NextRequest) {
     if (!valid)
       return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
 
-    await createSession({ userId: user._id.toString(), name: user.name, email: user.email });
+    const sessionPayload = { userId: user._id.toString(), name: user.name, email: user.email };
+    const token = await createSession(sessionPayload);
 
-    return NextResponse.json({ message: "Logged in." });
+    return NextResponse.json({
+      message: "Logged in.",
+      token,
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+      },
+    });
   } catch (err: unknown) {
     console.error("[login]", err);
     return NextResponse.json({ error: "Server error." }, { status: 500 });

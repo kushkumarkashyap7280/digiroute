@@ -23,9 +23,21 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await User.create({ name, email, passwordHash });
 
-    await createSession({ userId: user._id.toString(), name: user.name, email: user.email });
+    const sessionPayload = { userId: user._id.toString(), name: user.name, email: user.email };
+    const token = await createSession(sessionPayload);
 
-    return NextResponse.json({ message: "Account created." }, { status: 201 });
+    return NextResponse.json(
+      {
+        message: "Account created.",
+        token,
+        user: {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+        },
+      },
+      { status: 201 }
+    );
   } catch (err: unknown) {
     console.error("[signup]", err);
     return NextResponse.json({ error: "Server error." }, { status: 500 });

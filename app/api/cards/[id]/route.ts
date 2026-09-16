@@ -10,10 +10,10 @@ import AddressCard from "@/models/AddressCard";
 import { deleteCloudinaryImages } from "@/lib/cloudinary";
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getSession();
+  const session = await getSession(req);
   if (!session) return NextResponse.json({ error: "Unauthorised." }, { status: 401 });
 
   const { id } = await params;
@@ -40,7 +40,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getSession();
+  const session = await getSession(req);
   if (!session) return NextResponse.json({ error: "Unauthorised." }, { status: 401 });
 
   const { id } = await params;

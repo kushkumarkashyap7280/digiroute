@@ -1,92 +1,54 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, X, Sparkles } from "lucide-react";
+import { Download, X, Smartphone } from "lucide-react";
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
-}
-
-const STORAGE_KEY = "digiroute_pwa_dismissed_until";
+const STORAGE_KEY = "digiroute_apk_download_dismissed_until";
+const APK_DOWNLOAD_URL =
+  "https://github.com/kushkumarkashyap7280/digiroutes_app/releases/latest/download/app-release.apk";
 
 export default function PWAInstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
-  const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    // Check if previously dismissed (within 30 days) or already installed
     try {
-      const isStandalone =
-        window.matchMedia("(display-mode: standalone)").matches ||
-        (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-      if (isStandalone) return;
-
+      // Check if user previously dismissed prompt (within 7 days)
       const dismissedUntil = localStorage.getItem(STORAGE_KEY);
       if (dismissedUntil && Date.now() < parseInt(dismissedUntil, 10)) {
         return;
       }
     } catch {
-      // ignore storage access error
+      // Ignore storage errors
     }
 
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      deferredPromptRef.current = e as BeforeInstallPromptEvent;
-      // Delay prompt appearance by 2 seconds so it feels natural and not aggressive
-      const timer = setTimeout(() => {
-        setShowPrompt(true);
-      }, 2000);
-      return () => clearTimeout(timer);
-    };
+    // Delay prompt appearance slightly so it feels natural
+    const timer = setTimeout(() => {
+      setShowPrompt(true);
+    }, 2000);
 
-    const handleAppInstalled = () => {
-      setShowPrompt(false);
-      deferredPromptRef.current = null;
-      try {
-        localStorage.setItem(STORAGE_KEY, String(Date.now() + 365 * 24 * 60 * 60 * 1000));
-      } catch {
-        /* ignore */
-      }
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    window.addEventListener("appinstalled", handleAppInstalled);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-      window.removeEventListener("appinstalled", handleAppInstalled);
-    };
+    return () => clearTimeout(timer);
   }, []);
-
-  const handleInstall = async () => {
-    if (!deferredPromptRef.current) {
-      setShowPrompt(false);
-      return;
-    }
-    await deferredPromptRef.current.prompt();
-    const choice = await deferredPromptRef.current.userChoice;
-    if (choice.outcome === "accepted") {
-      try {
-        localStorage.setItem(STORAGE_KEY, String(Date.now() + 365 * 24 * 60 * 60 * 1000));
-      } catch {
-        /* ignore */
-      }
-    }
-    deferredPromptRef.current = null;
-    setShowPrompt(false);
-  };
 
   const handleDismiss = () => {
     setShowPrompt(false);
     try {
-      // Dismiss for 30 days
-      localStorage.setItem(STORAGE_KEY, String(Date.now() + 30 * 24 * 60 * 60 * 1000));
+      // Dismiss for 7 days
+      localStorage.setItem(STORAGE_KEY, String(Date.now() + 7 * 24 * 60 * 60 * 1000));
     } catch {
       /* ignore */
     }
+  };
+
+  const handleDownload = () => {
+    try {
+      // Dismiss for 14 days after downloading
+      localStorage.setItem(STORAGE_KEY, String(Date.now() + 14 * 24 * 60 * 60 * 1000));
+    } catch {
+      /* ignore */
+    }
+    setShowPrompt(false);
   };
 
   return (
@@ -143,19 +105,23 @@ export default function PWAInstallPrompt() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                   <span style={{ fontWeight: 700, fontSize: "0.92rem", color: "var(--text)" }}>
-                    DigiRoute App
+                    DigiRoutes App
                   </span>
                   <span
                     style={{
                       fontSize: "0.65rem",
                       fontWeight: 700,
-                      background: "var(--orange-subtle)",
+                      background: "rgba(249, 115, 22, 0.15)",
                       color: "var(--orange)",
                       padding: "0.1rem 0.35rem",
                       borderRadius: 999,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.2rem",
                     }}
                   >
-                    PWA
+                    <Smartphone size={10} />
+                    Android APK
                   </span>
                 </div>
                 <button
@@ -179,20 +145,30 @@ export default function PWAInstallPrompt() {
               </div>
 
               <p className="text-muted text-xs" style={{ margin: "0.3rem 0 0.75rem", lineHeight: 1.45 }}>
-                Install on your device for instant 1-tap DIGIPIN lookup &amp; doorstep navigation.
+                Get our native mobile app with full-screen Google Maps, offline DIGIPIN encoding &amp; doorstep navigation.
               </p>
 
               {/* Action Buttons */}
               <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button
-                  type="button"
-                  onClick={handleInstall}
+                <a
+                  href={APK_DOWNLOAD_URL}
+                  download="digiroutes.apk"
+                  onClick={handleDownload}
                   className="btn btn-primary btn-sm"
-                  style={{ flex: 1, justifyContent: "center", padding: "0.45rem 0.75rem", fontSize: "0.82rem" }}
+                  style={{
+                    flex: 1,
+                    justifyContent: "center",
+                    padding: "0.45rem 0.75rem",
+                    fontSize: "0.82rem",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.35rem",
+                  }}
                 >
                   <Download size={13} />
-                  <span>Install App</span>
-                </button>
+                  <span>Download APK</span>
+                </a>
                 <button
                   type="button"
                   onClick={handleDismiss}
