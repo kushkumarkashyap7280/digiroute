@@ -1,0 +1,2 @@
+# Never deploy the admin bootstrap tooling.
+scripts/

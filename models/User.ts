@@ -6,6 +6,9 @@ export interface IUser extends Document {
   name: string;
   avatarUrl?: string;   // Cloudinary secure_url
   avatarId?: string;    // Cloudinary public_id (for cleanup)
+  status: "active" | "suspended"; // suspended users cannot log in or use the API
+  sessionVersion: number; // bump to sign the user out everywhere (password reset, suspend)
+  lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,6 +20,9 @@ const UserSchema = new Schema<IUser>(
     name: { type: String, required: true, trim: true },
     avatarUrl: { type: String, default: "" },
     avatarId: { type: String, default: "" },
+    status: { type: String, enum: ["active", "suspended"], default: "active" },
+    sessionVersion: { type: Number, default: 0 },
+    lastLoginAt: { type: Date },
   },
   { timestamps: true }
 );

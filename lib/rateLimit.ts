@@ -41,6 +41,32 @@ export async function checkRateLimit(
   }
 }
 
+/**
+ * Read-only check: has [key] already used up [limit] hits in the current
+ * window? Pair with checkRateLimit() to count only *failures* (e.g. wrong
+ * passwords) so legitimate successful sign-ins never lock anyone out.
+ */
+export async function rateLimitExceeded(
+  key: string,
+  limit: number,
+  windowSec: number
+): Promise<{ exceeded: boolean; retryAfterSec: number }> {
+  try {
+    await connectDB();
+    const windowMs = windowSec * 1000;
+    const bucket = Math.floor(Date.now() / windowMs);
+    const windowEnd = (bucket + 1) * windowMs;
+    const doc = await RateLimit.findOne({ key: `${key}:${bucket}` }).lean();
+    return {
+      exceeded: (doc?.count ?? 0) >= limit,
+      retryAfterSec: Math.max(1, Math.ceil((windowEnd - Date.now()) / 1000)),
+    };
+  } catch (err) {
+    console.error("[rateLimit]", err);
+    return { exceeded: false, retryAfterSec: 0 };
+  }
+}
+
 /** Builds the 429 response for a tripped limit. */
 export function tooManyRequests(retryAfterSec: number): NextResponse {
   const mins = Math.ceil(retryAfterSec / 60);

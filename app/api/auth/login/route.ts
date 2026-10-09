@@ -29,7 +29,18 @@ export async function POST(req: NextRequest) {
     if (!valid)
       return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
 
-    const sessionPayload = { userId: user._id.toString(), name: user.name, email: user.email };
+    if (user.status === "suspended")
+      return NextResponse.json({ error: "This account has been suspended. Contact support." }, { status: 403 });
+
+    user.lastLoginAt = new Date();
+    await user.save();
+
+    const sessionPayload = {
+      userId: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      sv: user.sessionVersion ?? 0,
+    };
     const token = await createSession(sessionPayload);
 
     return NextResponse.json({

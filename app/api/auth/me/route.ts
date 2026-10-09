@@ -12,7 +12,7 @@ import { getSession } from "@/lib/session";
 import { connectDB } from "@/lib/mongoose";
 import User from "@/models/User";
 import { deleteCloudinaryImages, isOwnedImageId } from "@/lib/cloudinary";
-import AddressCard from "@/models/AddressCard";
+import { deleteUserAndData } from "@/lib/accountDeletion";
 import bcrypt from "bcryptjs";
 import { destroySession } from "@/lib/session";
 import { checkRateLimit, clientIp, tooManyRequests } from "@/lib/rateLimit";
@@ -102,15 +102,7 @@ export async function DELETE(req: NextRequest) {
     if (!(await bcrypt.compare(password, user.passwordHash)))
       return NextResponse.json({ error: "Incorrect password." }, { status: 403 });
 
-    // Remove all images first (cards + avatar), then the data.
-    const cards = await AddressCard.find({ ownerId: user._id }).select("photoIds").lean();
-    const imageIds = [
-      ...cards.flatMap((c) => c.photoIds ?? []),
-      ...(user.avatarId ? [user.avatarId] : []),
-    ];
-    await deleteCloudinaryImages(imageIds);
-    await AddressCard.deleteMany({ ownerId: user._id });
-    await user.deleteOne();
+    await deleteUserAndData(user);
     await destroySession();
 
     return NextResponse.json({ message: "Account deleted." });

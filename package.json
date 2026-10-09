@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "admin:create": "node --env-file=.env.local scripts/create-super-admin.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.102.5",
