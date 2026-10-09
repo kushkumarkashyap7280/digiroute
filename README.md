@@ -38,13 +38,20 @@ Live: <https://digiroutes.vercel.app>
 | POST | `/api/auth/logout` | cookie | clears the session cookie |
 | GET | `/api/auth/me` | ✔ | current user incl. `avatarUrl` |
 | PUT | `/api/auth/me` | ✔ | `{ name?, avatarUrl?, avatarId? }` |
-| GET | `/api/cards?cursor=&limit=` | ✔ | own cards, newest first, cursor pagination |
+| DELETE | `/api/auth/me` | ✔ | `{ password }` — deletes the account, all cards, all photos and the avatar (5 attempts / hour) |
+| GET | `/api/cards?cursor=&limit=&q=&category=&favorite=` | ✔ | own cards, newest first, cursor pagination; `q` searches title/address/DIGIPIN; the first page also returns `total` and `facets` `{all, favorites, categories}` |
 | POST | `/api/cards` | ✔ | `{ digipin, title, humanAddress?, photoUrls?, photoIds?, isFavorite?, category?, deliveryNote?, contactPhone? }` |
 | PUT | `/api/cards/:id` | ✔ owner | any subset of the above; empty string clears an optional field |
 | DELETE | `/api/cards/:id` | ✔ owner | also deletes the card's Cloudinary images |
 | GET | `/api/cards/digipin/:pin` | – | **public** lookup used by shared links and QR codes |
 | POST | `/api/upload/sign` | ✔ | signed Cloudinary upload parameters |
+| POST | `/api/upload/cleanup` | ✔ | `{ publicIds }` — discards uploads whose save failed; only unused images in the caller's own folder are deleted |
 | GET | `/api/digipin/encode` · `/decode` | – | conversion helpers |
+
+**Image safety:** every `photoIds` / `avatarId` the client sends must be inside
+`digiroute/<userId>/` (only new ids are checked, so older cards keep working);
+images are deleted from Cloudinary when a card/photo/avatar is replaced or
+removed, and when a card or account is deleted.
 
 Validation lives in `lib/cardFields.ts`: category ∈ `home | work | shop | family | other`,
 delivery note ≤ 300 chars, phone `+?` and 7–15 digits.
