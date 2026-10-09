@@ -8,6 +8,9 @@ export interface IAddressCard extends Document {
   photoIds:  string[];     // Cloudinary public_id  — for deletion (cleanup on delete / TTL)
   humanAddress?: string;   // display-only label, never used for geolookup
   isFavorite: boolean;     // pinned by owner
+  category: string;        // home | work | shop | family | other | ""
+  deliveryNote: string;    // e.g. "Ring the bell twice" (max 300)
+  contactPhone: string;    // shown on the public card for call / WhatsApp
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,6 +38,9 @@ const AddressCardSchema = new Schema<IAddressCard>(
     },
     humanAddress: { type: String, default: "" },
     isFavorite:   { type: Boolean, default: false },
+    category:     { type: String, enum: ["", "home", "work", "shop", "family", "other"], default: "" },
+    deliveryNote: { type: String, default: "", maxlength: 300 },
+    contactPhone: { type: String, default: "" },
   },
   { timestamps: true }
 );
