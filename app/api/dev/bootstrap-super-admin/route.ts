@@ -1,6 +1,6 @@
 /**
  * POST /api/dev/bootstrap-super-admin   (local development only — see lib/adminBootstrap.ts)
- * Body: { token, name, email, password, confirmDatabase?, reset? }
+ * Body: { name, email, password, reset? }
  *
  * Creates THE super admin, or (reset: true) sets a new password for the existing
  * one. Any failed gate answers 404, exactly like a route that doesn't exist.
@@ -9,9 +9,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/mongoose";
-import { bootstrapEnabled, describeDatabase, isLocalHost, tokenMatches } from "@/lib/adminBootstrap";
+import { bootstrapEnabled, isLocalHost } from "@/lib/adminBootstrap";
 import { validateAdminPassword } from "@/lib/passwords";
-import { checkRateLimit, clientIp, rateLimitExceeded } from "@/lib/rateLimit";
 import { audit } from "@/lib/audit";
 import Admin from "@/models/Admin";
 
@@ -23,19 +22,6 @@ export async function POST(req: NextRequest) {
   if (!bootstrapEnabled() || !isLocalHost(req.headers.get("host"))) return gone();
 
   const body = await req.json().catch(() => ({}));
-
-  // Guessing the token is rate limited (only wrong guesses count).
-  const key = `bootstrap:${clientIp(req)}`;
-  if ((await rateLimitExceeded(key, 5, 60 * 60)).exceeded) return gone();
-  if (!tokenMatches(body.token)) {
-    await checkRateLimit(key, 5, 60 * 60);
-    return gone();
-  }
-
-  // Writing to a remote database needs its name typed back, like the old CLI did.
-  const db = describeDatabase();
-  if (!db.local && String(body.confirmDatabase ?? "") !== db.name)
-    return json({ error: `This is a REMOTE database. Type its name ("${db.name}") to confirm.` }, 400);
 
   const problem = validateAdminPassword(body.password);
   if (problem) return json({ error: problem }, 400);

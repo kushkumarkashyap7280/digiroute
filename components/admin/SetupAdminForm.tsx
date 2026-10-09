@@ -7,7 +7,7 @@ type Db = { host: string; name: string; local: boolean };
 
 export default function SetupAdminForm({ database }: { database: Db }) {
   const [reset, setReset] = useState(false);
-  const [f, setF] = useState({ token: "", name: "", email: "", password: "", again: "", confirmDatabase: "" });
+  const [f, setF] = useState({ name: "", email: "", password: "", again: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -24,11 +24,11 @@ export default function SetupAdminForm({ database }: { database: Db }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...f, reset }),
       });
-      if (res.status === 404 && !(await res.clone().text())) throw new Error("Wrong setup token.");
+      if (res.status === 404) throw new Error("Setup isn't available here. Run the site locally with `npm run dev` and open it on localhost.");
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Failed.");
       setDone(data.email);
-      setF({ ...f, password: "", again: "", token: "" });
+      setF({ ...f, password: "", again: "" });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -46,18 +46,21 @@ export default function SetupAdminForm({ database }: { database: Db }) {
             {database.name} on {database.host} {database.local ? "(local)" : "(REMOTE)"}
           </b>
         </p>
+        {!database.local && !done && (
+          <div role="note" style={{ margin: "0 0 14px", padding: "10px 12px", borderRadius: 10, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.35)", fontSize: 13.5 }}>
+            This will write to a <b>remote</b> database. Check the name above is the one you mean.
+          </div>
+        )}
 
         {done ? (
           <div role="status" style={{ lineHeight: 1.6 }}>
             ✅ Done for <b>{done}</b>. Sign in on the website with <b>Ctrl + Shift + K</b>.
             <p style={{ fontSize: 13.5, color: "var(--text-secondary)" }}>
-              Now lock this up: delete <code>SUPER_ADMIN_BOOTSTRAP_TOKEN</code> from <code>.env.local</code> and put your normal
-              <code> MONGODB_URI</code> back. This page and route can no longer be used.
+              Now put your normal <code>MONGODB_URI</code> back in <code>.env.local</code> and restart the dev server. A second super admin can&apos;t be created anyway, and this page doesn&apos;t exist on the live site.
             </p>
           </div>
         ) : (
           <form onSubmit={submit} style={{ display: "grid", gap: 11 }} autoComplete="off">
-            <input style={inputStyle} type="password" placeholder="Setup token (SUPER_ADMIN_BOOTSTRAP_TOKEN)" value={f.token} onChange={set("token")} required autoComplete="off" />
             {!reset && (
               <>
                 <input style={inputStyle} placeholder="Your name" value={f.name} onChange={set("name")} required />
@@ -66,9 +69,6 @@ export default function SetupAdminForm({ database }: { database: Db }) {
             )}
             <input style={inputStyle} type="password" placeholder="Password (12+ chars, letters and numbers)" value={f.password} onChange={set("password")} required minLength={12} autoComplete="new-password" />
             <input style={inputStyle} type="password" placeholder="Repeat password" value={f.again} onChange={set("again")} required autoComplete="new-password" />
-            {!database.local && (
-              <input style={inputStyle} placeholder={`Type the database name to confirm: ${database.name}`} value={f.confirmDatabase} onChange={set("confirmDatabase")} required />
-            )}
             {error && <div role="alert" style={{ color: "#dc2626", fontSize: 13.5 }}>{error}</div>}
             <Button type="submit" variant="primary" disabled={busy}>{busy ? "Working…" : reset ? "Reset password" : "Create super admin"}</Button>
             <label style={{ fontSize: 13, color: "var(--text-secondary)", display: "flex", gap: 8, alignItems: "center" }}>

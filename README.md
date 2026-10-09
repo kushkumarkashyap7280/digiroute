@@ -157,30 +157,24 @@ Sub-admins never see photos, notes or phone numbers, DIGIPINs are masked for the
 and they can't search by DIGIPIN.
 
 **Creating the super admin (one time, from your own machine).** A local-only setup page
-and route do it — no script, nothing to run on the server:
+does it — no script, nothing to run on the server:
 
-1. In your local `.env.local` put a long random token and, temporarily, the database you
-   want the admin in (even the production one):
-   ```
-   SUPER_ADMIN_BOOTSTRAP_TOKEN=<output of: openssl rand -base64 32>
-   MONGODB_URI=<the database to create the admin in>
-   ```
-2. `npm run dev`, open <http://localhost:3000/dev/setup-admin>, enter the token, your name,
-   email and a password (12+ characters, letters and numbers). For a remote database you
-   must also type its name to confirm.
-3. **Lock it again:** delete `SUPER_ADMIN_BOOTSTRAP_TOKEN` from `.env.local` and restore your
-   normal `MONGODB_URI`.
+1. In your local `.env.local` set `MONGODB_URI` to the database you want the admin in
+   (even the production one), temporarily.
+2. `npm run dev`, open <http://localhost:3000/dev/setup-admin>, and enter your name, email
+   and a password (12+ characters, letters and numbers). The page shows which database it
+   will write to and warns if it is remote.
+3. Put your normal local `MONGODB_URI` back and restart the dev server.
 
 The same page has an "I forgot my password" option to reset the existing super admin.
 
-Why it can't be used on the live site — it needs **all** of these, and fails with a bare 404
+Why it can't be used on the live site — it needs **all** of these, and answers with a bare 404
 otherwise (see `lib/adminBootstrap.ts`):
-- `NODE_ENV` is exactly `development` (production, preview and test builds are denied);
+- `NODE_ENV` is exactly `development`. Next.js forces `production` for every build and
+  deployment (production and preview alike), so a deployed site never passes this;
 - not running on Vercel or CI;
 - the request is addressed to `localhost`;
-- `SUPER_ADMIN_BOOTSTRAP_TOKEN` is configured (it exists only in your local file — never set
-  it on Vercel) **and** sent with the request; wrong guesses are rate limited;
-- no super admin exists yet (there can only be one).
+- no super admin exists yet (there can only be one; the reset mode only changes the password).
 
 **Security notes**
 - Admins are a separate collection from users; signing up can never create one.
