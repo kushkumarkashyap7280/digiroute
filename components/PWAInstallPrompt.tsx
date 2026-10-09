@@ -7,7 +7,7 @@ import { Download, X, Smartphone } from "lucide-react";
 
 const STORAGE_KEY = "digiroute_apk_download_dismissed_until";
 const APK_DOWNLOAD_URL =
-  "https://github.com/kushkumarkashyap7280/digiroutes_app/releases/latest/download/app-release.apk";
+  "https://github.com/kushkumarkashyap7280/digiroutes_app/releases/latest";
 
 export default function PWAInstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);

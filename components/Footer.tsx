@@ -111,8 +111,7 @@ export default function Footer() {
                 About DigiRoute
               </Link>
               <a
-                href="https://github.com/kushkumarkashyap7280/digiroutes_app/releases/latest/download/app-release.apk"
-                download="digiroutes.apk"
+                href="https://github.com/kushkumarkashyap7280/digiroutes_app/releases/latest"
                 className="text-muted hover:text-orange"
                 style={{ transition: "color 0.2s", display: "flex", alignItems: "center", gap: "0.35rem" }}
               >
