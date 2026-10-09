@@ -14,7 +14,7 @@ import { Smartphone, X } from "lucide-react";
 
 const PACKAGE = "com.example.digiroutes_app";
 const APK_URL =
-  "https://github.com/kushkumarkashyap7280/digiroutes_app/releases/latest/download/app-release.apk";
+  "https://github.com/kushkumarkashyap7280/digiroutes_app/releases/latest";
 const DISMISS_KEY = "digiroute_open_in_app_dismissed";
 
 const noopSubscribe = () => () => {};
