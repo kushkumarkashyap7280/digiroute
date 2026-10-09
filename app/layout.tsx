@@ -7,6 +7,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "sonner";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import OpenInAppBanner from "@/components/OpenInAppBanner";
+import AdminLoginModal from "@/components/AdminLoginModal";
 
 import QueryProvider from "@/components/QueryProvider";
 
@@ -95,6 +96,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Footer />
             <PWAInstallPrompt />
             <OpenInAppBanner />
+            <AdminLoginModal />
             <Toaster
               position="bottom-right"
               toastOptions={{

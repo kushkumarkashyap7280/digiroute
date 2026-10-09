@@ -87,6 +87,7 @@ npm run dev               # http://localhost:3000
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `MONGODB_URI` | ✔ | MongoDB connection string |
+| `ADMIN_SESSION_SECRET` | – | Optional separate signing key for admin sessions |
 | `SESSION_SECRET` | ✔ in production | JWT signing secret. **Production deploys fail without it**; a dev fallback exists for local/preview only |
 | `CLOUDINARY_CLOUD_NAME` · `CLOUDINARY_API_KEY` · `CLOUDINARY_API_SECRET` | ✔ for photos | Uploads (cloud name must match the key's account) |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | – | Optional; embeds work without it |
@@ -114,12 +115,14 @@ reload keeps the old schema in memory and silently drops new fields.
 app/
 ├── api/
 │   ├── auth/{signup,login,logout,me}/   Auth + profile
+│   ├── admin/…                          Admin API (auth, stats, users, cards, admins, audit)
 │   ├── cards/                           List/create · [id] update/delete · digipin/[pin] public lookup
 │   ├── upload/sign/                     Cloudinary signed upload params
 │   └── digipin/{encode,decode}/         Conversion helpers
 ├── digipin/[digipin]/ · card/[digipin]/ Public location pages (no card data)
 ├── c/[token]/                           Private shared card page
 ├── dashboard/ · login/ · signup/ · convert/ · about/ · location/[id]/
+├── admin/                               Hidden admin panel (404 unless signed in)
 components/                              UI (dashboard, QR modals, banners, forms)
 lib/
 ├── digipin.ts        DIGIPIN encode/decode
@@ -127,12 +130,63 @@ lib/
 ├── rateLimit.ts      MongoDB fixed-window rate limiter
 ├── cardFields.ts     category / note / phone validation
 ├── mongoose.ts · cloudinary.ts · cloudinaryClient.ts
-models/               User, AddressCard, RateLimit
+models/               User, AddressCard, RateLimit, Admin, AuditLog
+scripts/              create-super-admin.mjs (CLI only, never deployed)
 (lib/shareLinks.ts: share tokens, expiry, what a link holder may see)
 public/.well-known/   assetlinks.json (Android App Links)
 ```
 
 ---
+
+## Admin panel
+
+A separate, hidden admin area for the people running DigiRoute. There is **no link
+to it anywhere**: press **Ctrl + Shift + K** on any page of the site to open the
+sign-in modal (the shortcut is only a convenience — the security is the server).
+Signed out, `/admin` is a plain 404.
+
+| | Super admin (exactly one) | Sub-admin |
+| --- | --- | --- |
+| Analytics, users list, cards list (metadata) | ✔ | ✔ |
+| Suspend / reactivate / delete users, reset their password | ✔ | – |
+| Open a card's photos / note / phone (audited), remove a card | ✔ | – |
+| Create, disable, reset the password of and delete sub-admins | ✔ | – |
+| Audit log | ✔ | – |
+| Change own password | ✔ | ✔ |
+
+Sub-admins never see photos, notes or phone numbers, DIGIPINs are masked for them
+and they can't search by DIGIPIN.
+
+**Creating the super admin.** There is deliberately no API for it — only a
+command-line script that you run yourself:
+
+```bash
+ALLOW_SUPER_ADMIN_BOOTSTRAP=true npm run admin:create             # create
+ALLOW_SUPER_ADMIN_BOOTSTRAP=true npm run admin:create -- --reset-password   # forgot it
+```
+
+It asks for your name, email and a hidden password (12+ characters, letters and
+numbers). It **refuses** to run when `NODE_ENV=production`, on Vercel or in CI, unless
+`ALLOW_SUPER_ADMIN_BOOTSTRAP=true` is set for that one command, if a super admin already
+exists, and it makes you type the database name before touching a remote database.
+`scripts/` is listed in `.vercelignore`, so it is never deployed. To create the
+production super admin, run it on your own machine with `MONGODB_URI` pointing at the
+production database (for example `MONGODB_URI="…" ALLOW_SUPER_ADMIN_BOOTSTRAP=true node scripts/create-super-admin.mjs`).
+
+**Security notes**
+- Admins are a separate collection from users; signing up can never create one.
+- Own cookie (`__Host-` prefix on HTTPS), own signing key, 8-hour sessions,
+  `SameSite=Strict`, checked against the database on **every** request — disabling an
+  admin or changing a password signs them out immediately.
+- State-changing requests need a custom header and a same-origin `Origin` (CSRF).
+- Sign-in: 5 failed attempts per IP+email / 20 per IP per 15 min, account lock after
+  8 failures, identical error for unknown / wrong / disabled, constant-time check.
+- Temporary passwords are random, shown once and must be replaced at first sign-in.
+- Every sign-in and change is written to the append-only audit log.
+- Optional: set `ADMIN_SESSION_SECRET` to sign admin sessions with a key separate from `SESSION_SECRET`.
+
+Suspending, resetting or deleting an **app user** takes effect at once: their sessions
+are revoked (checked on every request, cached for at most 30 s per server instance).
 
 ## Android App Links
 
