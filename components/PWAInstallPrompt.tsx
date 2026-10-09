@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, X, Smartphone } from "lucide-react";
@@ -10,6 +11,7 @@ const APK_DOWNLOAD_URL =
   "https://github.com/kushkumarkashyap7280/digiroutes_app/releases/latest";
 
 export default function PWAInstallPrompt() {
+  const pathname = usePathname();
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
@@ -50,6 +52,9 @@ export default function PWAInstallPrompt() {
     }
     setShowPrompt(false);
   };
+
+  // The admin area is its own app: no public-site install prompt in there.
+  if (pathname?.startsWith("/admin")) return null;
 
   return (
     <AnimatePresence>

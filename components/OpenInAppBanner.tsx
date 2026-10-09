@@ -34,7 +34,7 @@ export default function OpenInAppBanner() {
   const wasDismissed = useSyncExternalStore(noopSubscribe, wasDismissedSnapshot, serverFalse);
   const [dismissedNow, setDismissedNow] = useState(false);
 
-  const isTarget = /^\/(digipin|card)\/[^/]+/.test(pathname ?? "");
+  const isTarget = /^\/(digipin|card|c)\/[^/]+/.test(pathname ?? "");
   if (!isTarget || !isAndroid || wasDismissed || dismissedNow) return null;
 
   const href =

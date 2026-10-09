@@ -7,12 +7,14 @@
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { SignJWT, jwtVerify } from "jose";
+import { connectDB } from "@/lib/mongoose";
+import User from "@/models/User";
 
 // Never fall back to a publicly known secret on the live site: anyone could
 // forge login tokens with it. The fallback is for local/preview only; a
 // production deploy without SESSION_SECRET fails fast (build keeps the
 // previous deployment live).
-function loadSecret(): string {
+export function loadSecret(): string {
   const secret = process.env.SESSION_SECRET;
   if (secret) return secret;
   if (process.env.VERCEL_ENV === "production") {
@@ -28,6 +30,7 @@ const MAX_AGE_SEC = 60 * 60 * 24 * 7; // 7 days
 
 export interface SessionPayload {
   userId: string;
+  sv?: number; // user.sessionVersion at sign-in; a mismatch means the session was revoked
   name: string;
   email: string;
 }
@@ -62,6 +65,39 @@ export async function createSession(payload: SessionPayload): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
+// Revocation: a valid signature isn't enough — the user must still exist, not be
+// suspended and not have had their sessions revoked (password reset by an admin).
+// A short per-instance cache keeps this off the hot path (revocation lag ≤ 30 s).
+// ---------------------------------------------------------------------------
+const STATUS_TTL_MS = 30_000;
+const statusCache = new Map<string, { sv: number; active: boolean; exp: number }>();
+
+async function isSessionStillValid(payload: SessionPayload): Promise<boolean> {
+  const now = Date.now();
+  let entry = statusCache.get(payload.userId);
+  if (!entry || entry.exp < now) {
+    try {
+      await connectDB();
+      const user = await User.findById(payload.userId).select("status sessionVersion").lean();
+      entry = {
+        active: !!user && user.status !== "suspended",
+        sv: user?.sessionVersion ?? 0,
+        exp: now + STATUS_TTL_MS,
+      };
+    } catch {
+      return true; // database hiccup: don't lock everyone out
+    }
+    statusCache.set(payload.userId, entry);
+  }
+  return entry.active && (payload.sv ?? 0) === entry.sv;
+}
+
+/** Call after changing a user's status/sessionVersion so this instance sees it at once. */
+export function forgetSessionCache(userId: string) {
+  statusCache.delete(userId);
+}
+
+// ---------------------------------------------------------------------------
 // Read (verify Authorization header or cookie)
 // ---------------------------------------------------------------------------
 export async function getSession(req?: NextRequest): Promise<SessionPayload | null> {
@@ -72,7 +108,8 @@ export async function getSession(req?: NextRequest): Promise<SessionPayload | nu
       const token = authHeader.substring(7).trim();
       try {
         const { payload } = await jwtVerify(token, SECRET);
-        return payload as unknown as SessionPayload;
+        const session = payload as unknown as SessionPayload;
+        return (await isSessionStillValid(session)) ? session : null;
       } catch {
         return null;
       }
@@ -86,7 +123,8 @@ export async function getSession(req?: NextRequest): Promise<SessionPayload | nu
     if (!token) return null;
 
     const { payload } = await jwtVerify(token, SECRET);
-    return payload as unknown as SessionPayload;
+    const session = payload as unknown as SessionPayload;
+    return (await isSessionStillValid(session)) ? session : null;
   } catch {
     return null;
   }
