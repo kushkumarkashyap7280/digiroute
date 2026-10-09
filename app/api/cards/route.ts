@@ -2,7 +2,7 @@
  * GET  /api/cards?cursor=<lastId>&limit=12&q=&category=&favorite=true
  *                                             → paginated list (cursor-based), server-side
  *                                               search/filter; first page also returns
- *                                               `total` and `facets` (favorite count, used categories)
+ *                                               `total` and `facets` (all, favorites, used categories)
  * POST /api/cards                             → create a new card
  */
 
@@ -63,15 +63,16 @@ export async function GET(req: NextRequest) {
   // First page only: totals + facets so the UI can show counts and offer only
   // the categories that exist, without loading every card.
   let total: number | undefined;
-  let facets: { favorites: number; categories: string[] } | undefined;
+  let facets: { all: number; favorites: number; categories: string[] } | undefined;
   if (!cursor) {
-    const [t, favorites, categories] = await Promise.all([
+    const [t, all, favorites, categories] = await Promise.all([
       AddressCard.countDocuments(base),
+      AddressCard.countDocuments({ ownerId }),
       AddressCard.countDocuments({ ownerId, isFavorite: true }),
       AddressCard.distinct("category", { ownerId }),
     ]);
     total = t;
-    facets = { favorites, categories: categories.filter((c: string) => c) };
+    facets = { all, favorites, categories: categories.filter((c: string) => c) };
   }
 
   return NextResponse.json({ cards, nextCursor, hasMore, total, facets });
