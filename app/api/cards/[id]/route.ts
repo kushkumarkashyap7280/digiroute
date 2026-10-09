@@ -8,6 +8,7 @@ import { connectDB } from "@/lib/mongoose";
 import { getSession } from "@/lib/session";
 import AddressCard from "@/models/AddressCard";
 import { deleteCloudinaryImages } from "@/lib/cloudinary";
+import { parseCardExtras } from "@/lib/cardFields";
 
 export async function DELETE(
   req: NextRequest,
@@ -46,7 +47,10 @@ export async function PUT(
   const { id } = await params;
 
   try {
-    const { title, humanAddress, digipin, photoUrls, photoIds, isFavorite } = await req.json();
+    const body = await req.json();
+    const { title, humanAddress, digipin, photoUrls, photoIds, isFavorite } = body;
+    const extras = parseCardExtras(body);
+    if (!extras.ok) return NextResponse.json({ error: extras.error }, { status: 400 });
 
     await connectDB();
     const card = await AddressCard.findById(id);
@@ -70,6 +74,9 @@ export async function PUT(
     if (humanAddress !== undefined) card.humanAddress = humanAddress.trim();
     if (digipin !== undefined) card.digipin = digipin.toUpperCase().trim();
     if (isFavorite !== undefined) card.isFavorite = Boolean(isFavorite);
+    if (extras.value.category !== undefined) card.category = extras.value.category;
+    if (extras.value.deliveryNote !== undefined) card.deliveryNote = extras.value.deliveryNote;
+    if (extras.value.contactPhone !== undefined) card.contactPhone = extras.value.contactPhone;
     if (Array.isArray(photoUrls) && photoUrls.length > 2)
       return NextResponse.json({ error: "Maximum 2 photos allowed." }, { status: 400 });
     if (photoUrls !== undefined) card.photoUrls = photoUrls;

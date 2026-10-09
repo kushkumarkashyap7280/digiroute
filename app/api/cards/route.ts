@@ -8,6 +8,7 @@ import { connectDB } from "@/lib/mongoose";
 import { getSession } from "@/lib/session";
 import AddressCard from "@/models/AddressCard";
 import mongoose from "mongoose";
+import { parseCardExtras } from "@/lib/cardFields";
 
 const DEFAULT_LIMIT = 10;
 
@@ -45,7 +46,8 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorised." }, { status: 401 });
 
   try {
-    const { digipin, title, photoUrls, photoIds, humanAddress, isFavorite } = await req.json();
+    const body = await req.json();
+    const { digipin, title, photoUrls, photoIds, humanAddress, isFavorite } = body;
 
     if (!digipin || !title)
       return NextResponse.json({ error: "digipin and title are required." }, { status: 400 });
@@ -53,8 +55,12 @@ export async function POST(req: NextRequest) {
     if (photoUrls && photoUrls.length > 2)
       return NextResponse.json({ error: "Maximum 2 photos allowed." }, { status: 400 });
 
+    const extras = parseCardExtras(body);
+    if (!extras.ok) return NextResponse.json({ error: extras.error }, { status: 400 });
+
     await connectDB();
     const card = await AddressCard.create({
+      ...extras.value,
       digipin:      digipin.toUpperCase(),
       ownerId:      session.userId,
       title,
