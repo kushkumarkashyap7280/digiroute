@@ -46,7 +46,7 @@ const FAQS = [
   },
   {
     q: "How are entrance photos optimized for fast mobile loading?",
-    a: "Photos taken on mobile cameras (up to 2MB) are automatically transformed into ultra-lightweight micro-thumbnails (5–15 KB) for instant dashboard loading. Full high-resolution photos are only loaded on demand when opening the fullscreen lightbox view.",
+    a: "Photos taken on mobile cameras (up to 4MB) are automatically transformed into ultra-lightweight micro-thumbnails (5–15 KB) for instant dashboard loading. Full high-resolution photos are only loaded on demand when opening the fullscreen lightbox view.",
   },
 ];
 

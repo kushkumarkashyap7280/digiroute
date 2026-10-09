@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { Upload, X, Image as ImageIcon, AlertCircle, CheckCircle2, Camera } from "lucide-react";
 import { toast } from "sonner";
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4 MB
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 interface Props {
@@ -44,7 +44,7 @@ export default function ImageDropzone({ files, onChange, disabled, maxFiles = 2 
 
       if (f.size > MAX_FILE_SIZE) {
         const sizeMB = (f.size / (1024 * 1024)).toFixed(2);
-        const msg = `"${f.name}" exceeds the 2MB size limit (${sizeMB}MB). Please select an image under 2MB.`;
+        const msg = `"${f.name}" exceeds the 4MB size limit (${sizeMB}MB). Please select an image under 4MB.`;
         setError(msg);
         toast.error(msg);
         continue;
@@ -176,7 +176,7 @@ export default function ImageDropzone({ files, onChange, disabled, maxFiles = 2 
           <p className="text-muted" style={{ fontSize: "0.72rem", margin: 0 }}>
             {isFull
               ? "Remove a photo below to add or snap a new one."
-              : `Or drag & drop files here · PNG, JPG, JPEG, WebP · Max 2MB (Up to ${maxFiles} file${maxFiles > 1 ? "s" : ""})`}
+              : `Or drag & drop files here · PNG, JPG, JPEG, WebP · Max 4MB (Up to ${maxFiles} file${maxFiles > 1 ? "s" : ""})`}
           </p>
         </div>
       </div>

@@ -6,6 +6,7 @@ import ThemeScript from "@/components/ThemeScript";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "sonner";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import OpenInAppBanner from "@/components/OpenInAppBanner";
 
 import QueryProvider from "@/components/QueryProvider";
 
@@ -93,6 +94,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>{children}</div>
             <Footer />
             <PWAInstallPrompt />
+            <OpenInAppBanner />
             <Toaster
               position="bottom-right"
               toastOptions={{

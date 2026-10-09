@@ -579,7 +579,7 @@ function DashboardContent({ userName }: { userName: string }) {
                 <label className="form-label" style={{ fontSize: "0.8rem", fontWeight: 600, display: "flex", justifyContent: "space-between" }}>
                   <span>
                     {existingPhotos.length === 0
-                      ? "Add Entrance Photos (max 2 · 2MB limit)"
+                      ? "Add Entrance Photos (max 2 · 4MB limit)"
                       : remainingPhotoSlots > 0
                       ? `Add More Photos (${remainingPhotoSlots} slot remaining)`
                       : "Photo Limit Reached (2/2)"}
@@ -847,7 +847,7 @@ function DashboardContent({ userName }: { userName: string }) {
               <label className="form-label" htmlFor="card-photos" style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.8rem", fontWeight: 600 }}>
                 <Upload size={12} />
                 <span>Entrance Photos</span>
-                <span style={{ color: "var(--muted)", fontWeight: 400, textTransform: "none" }}>(optional · max 2 · 2MB limit)</span>
+                <span style={{ color: "var(--muted)", fontWeight: 400, textTransform: "none" }}>(optional · max 2 · 4MB limit)</span>
               </label>
               <ImageDropzone files={photos} onChange={setPhotos} disabled={submitLoading} />
             </div>
