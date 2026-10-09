@@ -8,7 +8,7 @@
  * APK download when it isn't installed.
  */
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { Smartphone, X } from "lucide-react";
 
@@ -17,24 +17,25 @@ const APK_URL =
   "https://github.com/kushkumarkashyap7280/digiroutes_app/releases/latest/download/app-release.apk";
 const DISMISS_KEY = "digiroute_open_in_app_dismissed";
 
+const noopSubscribe = () => () => {};
+const isAndroidSnapshot = () => /android/i.test(navigator.userAgent);
+const wasDismissedSnapshot = () => {
+  try {
+    return sessionStorage.getItem(DISMISS_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+const serverFalse = () => false;
+
 export default function OpenInAppBanner() {
   const pathname = usePathname();
-  const [show, setShow] = useState(false);
+  const isAndroid = useSyncExternalStore(noopSubscribe, isAndroidSnapshot, serverFalse);
+  const wasDismissed = useSyncExternalStore(noopSubscribe, wasDismissedSnapshot, serverFalse);
+  const [dismissedNow, setDismissedNow] = useState(false);
 
   const isTarget = /^\/(digipin|card)\/[^/]+/.test(pathname ?? "");
-
-  useEffect(() => {
-    if (!isTarget) return setShow(false);
-    if (!/android/i.test(navigator.userAgent)) return;
-    try {
-      if (sessionStorage.getItem(DISMISS_KEY)) return;
-    } catch {
-      /* ignore */
-    }
-    setShow(true);
-  }, [isTarget, pathname]);
-
-  if (!show) return null;
+  if (!isTarget || !isAndroid || wasDismissed || dismissedNow) return null;
 
   const href =
     `intent://${window.location.host}${pathname}#Intent;scheme=https;` +
@@ -81,7 +82,7 @@ export default function OpenInAppBanner() {
       <button
         aria-label="Dismiss"
         onClick={() => {
-          setShow(false);
+          setDismissedNow(true);
           try {
             sessionStorage.setItem(DISMISS_KEY, "1");
           } catch {
