@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/mongoose";
 import User from "@/models/User";
 import { createSession } from "@/lib/session";
+import { checkRateLimit, clientIp, tooManyRequests } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,6 +11,13 @@ export async function POST(req: NextRequest) {
 
     if (!email || !password)
       return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
+
+    // Brute-force protection: per account+IP, and a looser per-IP cap.
+    const ip = clientIp(req);
+    const byAccount = await checkRateLimit(`login:${ip}:${String(email).toLowerCase()}`, 8, 15 * 60);
+    if (!byAccount.ok) return tooManyRequests(byAccount.retryAfterSec);
+    const byIp = await checkRateLimit(`login-ip:${ip}`, 40, 15 * 60);
+    if (!byIp.ok) return tooManyRequests(byIp.retryAfterSec);
 
     await connectDB();
 
