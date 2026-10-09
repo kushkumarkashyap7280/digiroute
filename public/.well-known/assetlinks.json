@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.example.digiroutes_app",
+      "sha256_cert_fingerprints": [
+        "D3:1D:FF:9A:C5:95:7D:22:BA:18:DE:E9:F3:74:42:E6:F7:18:51:5C:89:EA:4C:84:6C:BA:DB:9E:64:70:E9:5A",
+        "47:74:09:C7:E2:43:EE:92:F3:A9:75:D9:B6:B2:28:F7:8B:76:36:5F:BA:63:73:52:1E:76:1F:D3:40:3B:99:5C"
+      ]
+    }
+  }
+]

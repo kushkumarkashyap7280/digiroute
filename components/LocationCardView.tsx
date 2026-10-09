@@ -172,9 +172,9 @@ export default function LocationCardView({ card, coords }: Props) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate size (< 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error(`"${file.name}" exceeds the 2MB size limit. Please select an image under 2MB.`);
+    // Validate size (< 4MB)
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error(`"${file.name}" exceeds the 4MB size limit. Please select an image under 4MB.`);
       e.target.value = "";
       return;
     }

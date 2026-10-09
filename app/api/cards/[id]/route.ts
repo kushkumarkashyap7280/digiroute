@@ -46,7 +46,7 @@ export async function PUT(
   const { id } = await params;
 
   try {
-    const { title, humanAddress, digipin, photoUrls, photoIds } = await req.json();
+    const { title, humanAddress, digipin, photoUrls, photoIds, isFavorite } = await req.json();
 
     await connectDB();
     const card = await AddressCard.findById(id);
@@ -69,6 +69,9 @@ export async function PUT(
     if (title !== undefined) card.title = title.trim();
     if (humanAddress !== undefined) card.humanAddress = humanAddress.trim();
     if (digipin !== undefined) card.digipin = digipin.toUpperCase().trim();
+    if (isFavorite !== undefined) card.isFavorite = Boolean(isFavorite);
+    if (Array.isArray(photoUrls) && photoUrls.length > 2)
+      return NextResponse.json({ error: "Maximum 2 photos allowed." }, { status: 400 });
     if (photoUrls !== undefined) card.photoUrls = photoUrls;
     if (photoIds !== undefined) card.photoIds = photoIds;
 

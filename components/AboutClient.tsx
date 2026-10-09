@@ -237,7 +237,7 @@ export default function AboutClient() {
                     <Smartphone size={14} />
                     <span>Live Camera &amp; Gallery</span>
                   </div>
-                  Snap live doorway photos directly with your phone camera or select existing photos under 2MB.
+                  Snap live doorway photos directly with your phone camera or select existing photos under 4MB.
                 </div>
                 <div style={{ background: "var(--surface2)", padding: "0.75rem 0.85rem", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--orange)", fontWeight: 700, marginBottom: "0.25rem" }}>

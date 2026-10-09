@@ -7,6 +7,7 @@ export interface IAddressCard extends Document {
   photoUrls: string[];     // Cloudinary secure_url — for display
   photoIds:  string[];     // Cloudinary public_id  — for deletion (cleanup on delete / TTL)
   humanAddress?: string;   // display-only label, never used for geolookup
+  isFavorite: boolean;     // pinned by owner
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +34,7 @@ const AddressCardSchema = new Schema<IAddressCard>(
       },
     },
     humanAddress: { type: String, default: "" },
+    isFavorite:   { type: Boolean, default: false },
   },
   { timestamps: true }
 );

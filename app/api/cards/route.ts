@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorised." }, { status: 401 });
 
   try {
-    const { digipin, title, photoUrls, photoIds, humanAddress } = await req.json();
+    const { digipin, title, photoUrls, photoIds, humanAddress, isFavorite } = await req.json();
 
     if (!digipin || !title)
       return NextResponse.json({ error: "digipin and title are required." }, { status: 400 });
@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
       photoUrls:    photoUrls ?? [],
       photoIds:     photoIds  ?? [],
       humanAddress: humanAddress ?? "",
+      isFavorite:   Boolean(isFavorite),
     });
 
     return NextResponse.json({ card }, { status: 201 });
