@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { getSession } from "@/lib/session";
 import AddressCard from "@/models/AddressCard";
-import { deleteCloudinaryImages } from "@/lib/cloudinary";
+import { deleteCloudinaryImages, isOwnedImageId } from "@/lib/cloudinary";
 import { parseCardExtras } from "@/lib/cardFields";
 
 export async function DELETE(
@@ -60,6 +60,21 @@ export async function PUT(
 
     if (card.ownerId.toString() !== session.userId)
       return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+
+    // Only NEW image ids must live in the caller's own folder; ids already on
+    // the card pass through (older cards may predate the per-user folders).
+    if (photoIds !== undefined) {
+      const existing = new Set<string>(card.photoIds ?? []);
+      const valid =
+        Array.isArray(photoIds) &&
+        photoIds.every((p) => existing.has(p) || isOwnedImageId(session.userId, p));
+      if (!valid)
+        return NextResponse.json({ error: "Invalid photo reference." }, { status: 400 });
+      if (photoUrls !== undefined && (!Array.isArray(photoUrls) || photoUrls.length !== photoIds.length))
+        return NextResponse.json({ error: "photoUrls and photoIds must match." }, { status: 400 });
+      if (photoIds.length > 2)
+        return NextResponse.json({ error: "Maximum 2 photos allowed." }, { status: 400 });
+    }
 
     // If new photos are being set, delete previous photos from Cloudinary that are being replaced
     if (photoIds !== undefined && card.photoIds && card.photoIds.length > 0) {

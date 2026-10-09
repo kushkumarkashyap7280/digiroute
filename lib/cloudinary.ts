@@ -40,3 +40,17 @@ export async function deleteCloudinaryImages(publicIds: string[]) {
     console.warn("[Cloudinary] Bulk delete error:", err);
   }
 }
+
+/** Every upload goes to `digiroute/<userId>/…` (see /api/upload/sign). */
+export function userImagePrefix(userId: string): string {
+  return `digiroute/${userId}/`;
+}
+
+/**
+ * True when [id] is a Cloudinary public_id inside this user's own folder.
+ * Without this check a client could claim someone else's image id on its own
+ * card and later get it deleted.
+ */
+export function isOwnedImageId(userId: string, id: unknown): id is string {
+  return typeof id === "string" && id.startsWith(userImagePrefix(userId)) && !id.includes("..");
+}
