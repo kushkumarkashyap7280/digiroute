@@ -13,7 +13,8 @@ Live: <https://digiroutes.vercel.app>
 
 **Website**
 - DIGIPIN ⇄ coordinates converter, map view and Google Maps links
-- Public location pages: `/digipin/<PIN>` (and `/card/<PIN>` → redirects)
+- Public location pages: `/digipin/<PIN>` (and `/card/<PIN>` → redirects) — location only, never card data
+- **Private share links:** `/c/<token>` shows a card (photos, note, phone, map) only to people holding the link; not indexed, not cached
 - Account dashboard: create / edit / delete address cards with photos
 - QR code generator and scanner modals
 - PWA-ready, light & dark themes
@@ -22,6 +23,7 @@ Live: <https://digiroutes.vercel.app>
 **API** (also consumed by the app)
 - Email + password auth, JWT in an HTTP-only cookie (web) or `Bearer` token (app)
 - Address cards: favorites, category, delivery note, contact phone, up to 2 photos
+- **Private sharing:** every card has a random share token; the owner can switch sharing off, reset the link, set an expiry (24 h / 7 d) and hide the phone number
 - Profile: name and avatar (old Cloudinary images are purged on replace/delete)
 - Cloudinary **signed direct uploads** — image bytes never pass through the server
 - Login/signup **rate limiting** backed by MongoDB (shared across serverless instances)
@@ -41,12 +43,20 @@ Live: <https://digiroutes.vercel.app>
 | DELETE | `/api/auth/me` | ✔ | `{ password }` — deletes the account, all cards, all photos and the avatar (5 attempts / hour) |
 | GET | `/api/cards?cursor=&limit=&q=&category=&favorite=` | ✔ | own cards, newest first, cursor pagination; `q` searches title/address/DIGIPIN; the first page also returns `total` and `facets` `{all, favorites, categories}` |
 | POST | `/api/cards` | ✔ | `{ digipin, title, humanAddress?, photoUrls?, photoIds?, isFavorite?, category?, deliveryNote?, contactPhone? }` |
-| PUT | `/api/cards/:id` | ✔ owner | any subset of the above; empty string clears an optional field |
+| PUT | `/api/cards/:id` | ✔ owner | any subset of the above; empty string clears an optional field. Sharing: `sharingEnabled`, `hidePhone`, `shareExpiry` (`none`\|`24h`\|`7d`), `resetShareLink: true` |
 | DELETE | `/api/cards/:id` | ✔ owner | also deletes the card's Cloudinary images |
-| GET | `/api/cards/digipin/:pin` | – | **public** lookup used by shared links and QR codes |
+| GET | `/api/cards/shared/:token` | – | **the** public card lookup: only for an active share link; returns no owner id or photo ids; rate limited; counts a view |
+| GET | `/api/cards/:id` | ✔ owner | one of your cards incl. sharing settings |
+| GET | `/api/cards/digipin/:pin` | optional | **no longer exposes card data by DIGIPIN** (it is guessable from a location). Returns the card only to its signed-in owner, or for *legacy* cards until their owner resets the link; otherwise 404 |
 | POST | `/api/upload/sign` | ✔ | signed Cloudinary upload parameters |
 | POST | `/api/upload/cleanup` | ✔ | `{ publicIds }` — discards uploads whose save failed; only unused images in the caller's own folder are deleted |
 | GET | `/api/digipin/encode` · `/decode` | – | conversion helpers |
+
+**Sharing model.** A DIGIPIN is derived from a location, so it can never unlock
+private data. Cards are shared through `shareToken` (128-bit random, `lib/shareLinks.ts`).
+Cards created before this existed have no token: they get one the first time the
+owner loads them and stay reachable by DIGIPIN (`legacyPublic`) until the owner
+taps *Reset link*, so links that were already shared don't break.
 
 **Image safety:** every `photoIds` / `avatarId` the client sends must be inside
 `digiroute/<userId>/` (only new ids are checked, so older cards keep working);
@@ -107,7 +117,8 @@ app/
 │   ├── cards/                           List/create · [id] update/delete · digipin/[pin] public lookup
 │   ├── upload/sign/                     Cloudinary signed upload params
 │   └── digipin/{encode,decode}/         Conversion helpers
-├── digipin/[digipin]/ · card/[digipin]/ Public location pages
+├── digipin/[digipin]/ · card/[digipin]/ Public location pages (no card data)
+├── c/[token]/                           Private shared card page
 ├── dashboard/ · login/ · signup/ · convert/ · about/ · location/[id]/
 components/                              UI (dashboard, QR modals, banners, forms)
 lib/
@@ -117,6 +128,7 @@ lib/
 ├── cardFields.ts     category / note / phone validation
 ├── mongoose.ts · cloudinary.ts · cloudinaryClient.ts
 models/               User, AddressCard, RateLimit
+(lib/shareLinks.ts: share tokens, expiry, what a link holder may see)
 public/.well-known/   assetlinks.json (Android App Links)
 ```
 

@@ -10,7 +10,14 @@ export interface IAddressCard extends Document {
   isFavorite: boolean;     // pinned by owner
   category: string;        // home | work | shop | family | other | ""
   deliveryNote: string;    // e.g. "Ring the bell twice" (max 300)
-  contactPhone: string;    // shown on the public card for call / WhatsApp
+  contactPhone: string;    // shown on the shared card for call / WhatsApp
+  // ── Sharing (see lib/shareLinks.ts) ──
+  shareToken?: string;     // random, unguessable id used in /c/<token> links and QR codes
+  sharingEnabled: boolean; // owner switch: false = link is dead, card is private
+  shareExpiresAt?: Date | null; // link stops working after this time
+  hidePhone: boolean;      // omit contactPhone from the shared view
+  legacyPublic: boolean;   // old DIGIPIN-based link still works (grace period) until the owner resets the link
+  viewCount: number;       // how many times the shared link was opened
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,6 +48,12 @@ const AddressCardSchema = new Schema<IAddressCard>(
     category:     { type: String, enum: ["", "home", "work", "shop", "family", "other"], default: "" },
     deliveryNote: { type: String, default: "", maxlength: 300 },
     contactPhone: { type: String, default: "" },
+    shareToken:     { type: String, index: { unique: true, sparse: true } },
+    sharingEnabled: { type: Boolean, default: true },
+    shareExpiresAt: { type: Date, default: null },
+    hidePhone:      { type: Boolean, default: false },
+    legacyPublic:   { type: Boolean, default: false },
+    viewCount:      { type: Number, default: 0 },
   },
   { timestamps: true }
 );

@@ -1,4 +1,5 @@
 /**
+ * GET    /api/cards/[id]  → The signed-in owner's card (with its sharing settings)
  * DELETE /api/cards/[id]  → Deletes card & cleans up Cloudinary images
  * PUT    /api/cards/[id]  → Updates card & purges replaced Cloudinary images
  */
@@ -9,6 +10,27 @@ import { getSession } from "@/lib/session";
 import AddressCard from "@/models/AddressCard";
 import { deleteCloudinaryImages, isOwnedImageId } from "@/lib/cloudinary";
 import { parseCardExtras } from "@/lib/cardFields";
+import { backfillShareTokens, expiryToDate, newShareToken } from "@/lib/shareLinks";
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getSession(req);
+  if (!session) return NextResponse.json({ error: "Unauthorised." }, { status: 401 });
+
+  const { id } = await params;
+  if (!/^[a-f\d]{24}$/i.test(id))
+    return NextResponse.json({ error: "Card not found." }, { status: 404 });
+
+  await connectDB();
+  const card = await AddressCard.findById(id).lean();
+  if (!card || card.ownerId.toString() !== session.userId)
+    return NextResponse.json({ error: "Card not found." }, { status: 404 });
+
+  await backfillShareTokens([card]);
+  return NextResponse.json({ card }, { headers: { "Cache-Control": "no-store" } });
+}
 
 export async function DELETE(
   req: NextRequest,
@@ -49,6 +71,12 @@ export async function PUT(
   try {
     const body = await req.json();
     const { title, humanAddress, digipin, photoUrls, photoIds, isFavorite } = body;
+    let expiry: Date | null | undefined;
+    try {
+      expiry = expiryToDate(body.shareExpiry);
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+    }
     const extras = parseCardExtras(body);
     if (!extras.ok) return NextResponse.json({ error: extras.error }, { status: 400 });
 
@@ -83,6 +111,20 @@ export async function PUT(
       if (oldIdsToDelete.length > 0) {
         await deleteCloudinaryImages(oldIdsToDelete);
       }
+    }
+
+    // ── Sharing controls ──
+    if (!card.shareToken) {
+      card.shareToken = newShareToken();   // legacy card: keeps its old DIGIPIN link until reset
+      card.legacyPublic = true;
+    }
+    if (body.sharingEnabled !== undefined) card.sharingEnabled = Boolean(body.sharingEnabled);
+    if (body.hidePhone !== undefined) card.hidePhone = Boolean(body.hidePhone);
+    if (expiry !== undefined) card.shareExpiresAt = expiry;
+    if (body.resetShareLink === true) {
+      card.shareToken = newShareToken();   // old link (and old DIGIPIN link) stop working
+      card.legacyPublic = false;
+      card.viewCount = 0;
     }
 
     if (title !== undefined) card.title = title.trim();

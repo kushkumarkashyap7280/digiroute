@@ -13,6 +13,7 @@ import AddressCard from "@/models/AddressCard";
 import mongoose from "mongoose";
 import { parseCardExtras } from "@/lib/cardFields";
 import { isOwnedImageId } from "@/lib/cloudinary";
+import { backfillShareTokens, newShareToken } from "@/lib/shareLinks";
 
 const DEFAULT_LIMIT = 10;
 
@@ -57,6 +58,10 @@ export async function GET(req: NextRequest) {
 
   const hasMore = cards.length > limit;
   if (hasMore) cards.pop();     // remove the extra probe item
+
+  // Cards created before share links existed get a token now (their old
+  // DIGIPIN link keeps working until the owner resets the link).
+  await backfillShareTokens(cards);
 
   const nextCursor = hasMore ? String(cards[cards.length - 1]._id) : null;
 
@@ -106,6 +111,8 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const card = await AddressCard.create({
       ...extras.value,
+      shareToken:   newShareToken(),
+      sharingEnabled: true,
       digipin:      digipin.toUpperCase(),
       ownerId:      session.userId,
       title,
