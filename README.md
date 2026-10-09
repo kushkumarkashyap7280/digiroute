@@ -131,7 +131,6 @@ lib/
 ├── cardFields.ts     category / note / phone validation
 ├── mongoose.ts · cloudinary.ts · cloudinaryClient.ts
 models/               User, AddressCard, RateLimit, Admin, AuditLog
-scripts/              create-super-admin.mjs (CLI only, never deployed)
 (lib/shareLinks.ts: share tokens, expiry, what a link holder may see)
 public/.well-known/   assetlinks.json (Android App Links)
 ```
@@ -157,21 +156,31 @@ Signed out, `/admin` is a plain 404.
 Sub-admins never see photos, notes or phone numbers, DIGIPINs are masked for them
 and they can't search by DIGIPIN.
 
-**Creating the super admin.** There is deliberately no API for it — only a
-command-line script that you run yourself:
+**Creating the super admin (one time, from your own machine).** A local-only setup page
+and route do it — no script, nothing to run on the server:
 
-```bash
-ALLOW_SUPER_ADMIN_BOOTSTRAP=true npm run admin:create             # create
-ALLOW_SUPER_ADMIN_BOOTSTRAP=true npm run admin:create -- --reset-password   # forgot it
-```
+1. In your local `.env.local` put a long random token and, temporarily, the database you
+   want the admin in (even the production one):
+   ```
+   SUPER_ADMIN_BOOTSTRAP_TOKEN=<output of: openssl rand -base64 32>
+   MONGODB_URI=<the database to create the admin in>
+   ```
+2. `npm run dev`, open <http://localhost:3000/dev/setup-admin>, enter the token, your name,
+   email and a password (12+ characters, letters and numbers). For a remote database you
+   must also type its name to confirm.
+3. **Lock it again:** delete `SUPER_ADMIN_BOOTSTRAP_TOKEN` from `.env.local` and restore your
+   normal `MONGODB_URI`.
 
-It asks for your name, email and a hidden password (12+ characters, letters and
-numbers). It **refuses** to run when `NODE_ENV=production`, on Vercel or in CI, unless
-`ALLOW_SUPER_ADMIN_BOOTSTRAP=true` is set for that one command, if a super admin already
-exists, and it makes you type the database name before touching a remote database.
-`scripts/` is listed in `.vercelignore`, so it is never deployed. To create the
-production super admin, run it on your own machine with `MONGODB_URI` pointing at the
-production database (for example `MONGODB_URI="…" ALLOW_SUPER_ADMIN_BOOTSTRAP=true node scripts/create-super-admin.mjs`).
+The same page has an "I forgot my password" option to reset the existing super admin.
+
+Why it can't be used on the live site — it needs **all** of these, and fails with a bare 404
+otherwise (see `lib/adminBootstrap.ts`):
+- `NODE_ENV` is exactly `development` (production, preview and test builds are denied);
+- not running on Vercel or CI;
+- the request is addressed to `localhost`;
+- `SUPER_ADMIN_BOOTSTRAP_TOKEN` is configured (it exists only in your local file — never set
+  it on Vercel) **and** sent with the request; wrong guesses are rate limited;
+- no super admin exists yet (there can only be one).
 
 **Security notes**
 - Admins are a separate collection from users; signing up can never create one.
