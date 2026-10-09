@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/mongoose";
 import User from "@/models/User";
 import { createSession } from "@/lib/session";
+import { checkRateLimit, clientIp, tooManyRequests } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,6 +14,10 @@ export async function POST(req: NextRequest) {
 
     if (password.length < 6)
       return NextResponse.json({ error: "Password must be at least 6 characters." }, { status: 400 });
+
+    // Limit account creation per IP (5 per hour).
+    const limited = await checkRateLimit(`signup:${clientIp(req)}`, 5, 60 * 60);
+    if (!limited.ok) return tooManyRequests(limited.retryAfterSec);
 
     await connectDB();
 

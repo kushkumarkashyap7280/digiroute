@@ -8,9 +8,20 @@ import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { SignJWT, jwtVerify } from "jose";
 
-const SECRET = new TextEncoder().encode(
-  process.env.SESSION_SECRET ?? "change-me-in-production-32-chars!!"
-);
+// Never fall back to a publicly known secret on the live site: anyone could
+// forge login tokens with it. The fallback is for local/preview only; a
+// production deploy without SESSION_SECRET fails fast (build keeps the
+// previous deployment live).
+function loadSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (secret) return secret;
+  if (process.env.VERCEL_ENV === "production") {
+    throw new Error("SESSION_SECRET must be set for production deployments.");
+  }
+  return "change-me-in-production-32-chars!!";
+}
+
+const SECRET = new TextEncoder().encode(loadSecret());
 
 const COOKIE_NAME = "digiroute_session";
 const MAX_AGE_SEC = 60 * 60 * 24 * 7; // 7 days
