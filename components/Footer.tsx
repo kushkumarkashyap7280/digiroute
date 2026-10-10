@@ -14,8 +14,10 @@ import {
   User,
   ExternalLink,
   Download,
+  BookOpen,
 } from "lucide-react";
 import DigiRouteQRScannerModal from "@/components/DigiRouteQRScannerModal";
+import { USER_GUIDE_PDF } from "@/lib/guide";
 
 export default function Footer() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -110,6 +112,16 @@ export default function Footer() {
               <Link href="/about" className="text-muted hover:text-orange" style={{ transition: "color 0.2s" }}>
                 About DigiRoute
               </Link>
+              <a
+                href={USER_GUIDE_PDF}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted hover:text-orange"
+                style={{ transition: "color 0.2s", display: "flex", alignItems: "center", gap: "0.35rem" }}
+              >
+                <BookOpen size={13} className="text-orange" />
+                <span>User Guide (PDF)</span>
+              </a>
               <a
                 href="https://github.com/kushkumarkashyap7280/digiroutes_app/releases/latest"
                 className="text-muted hover:text-orange"

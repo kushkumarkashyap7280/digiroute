@@ -25,8 +25,11 @@ import {
   Keyboard,
   Building,
   Smartphone,
+  BookOpen,
+  Download,
 } from "lucide-react";
 import ParticleBackground from "@/components/ParticleBackground";
+import { USER_GUIDE_PDF } from "@/lib/guide";
 
 export default function AboutClient() {
   return (
@@ -388,7 +391,39 @@ export default function AboutClient() {
           </div>
         </section>
 
-        {/* ── 5. FINAL CALL TO ACTION ───────────────── */}
+        {/* ── 5. USER GUIDE (PDF) ───────────────────── */}
+        <section style={{ marginBottom: "3.5rem" }}>
+          <div
+            className="card"
+            style={{
+              padding: "1.75rem 1.5rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1rem",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <BookOpen size={22} className="text-orange" />
+              <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0 }}>DigiRoutes User Guide</h3>
+            </div>
+            <p className="text-muted text-sm" style={{ lineHeight: 1.65, margin: 0 }}>
+              A short, step-by-step PDF: installing the Android app, creating your first address card, sharing it
+              safely with a private link or QR code, opening a card someone sent you, planning a route, and fixing common problems.
+            </p>
+            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+              <a href={USER_GUIDE_PDF} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ padding: "0.65rem 1.25rem", fontSize: "0.85rem" }}>
+                <BookOpen size={16} />
+                <span>Read the guide</span>
+              </a>
+              <a href={USER_GUIDE_PDF} download="DigiRoutes_User_Guide.pdf" className="btn btn-outline" style={{ padding: "0.65rem 1.25rem", fontSize: "0.85rem" }}>
+                <Download size={16} />
+                <span>Download PDF</span>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 6. FINAL CALL TO ACTION ───────────────── */}
         <section style={{ textAlign: "center" }}>
           <div
             className="card"

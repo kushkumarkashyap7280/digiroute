@@ -7,6 +7,20 @@ delivery note, phone, category), and serves the API used by the Android app
 
 Live: <https://digiroutes.vercel.app>
 
+## Documentation
+
+- **User Guide (PDF)** — for people using DigiRoutes: install the app, create and share a card, scan a QR, FAQ.
+  Served by the site at [`/guide/DigiRoutes_User_Guide.pdf`](https://digiroutes.vercel.app/guide/DigiRoutes_User_Guide.pdf)
+  (linked from the footer and the About page); the file lives in [`public/guide/`](public/guide/DigiRoutes_User_Guide.pdf).
+- **Project Guide (PDF)** — for the project team, teachers and reviewers: architecture, DIGIPIN maths, every feature,
+  API, database design and the demo script. Kept with the app:
+  [PDF](https://github.com/kushkumarkashyap7280/digiroutes_app/blob/main/DigiRoutes_Project_Guide.pdf) ·
+  [Markdown](https://github.com/kushkumarkashyap7280/digiroutes_app/blob/main/DigiRoutes_Project_Guide.md).
+  Not published on the website.
+
+The guides are written in Markdown in the [`digiroutes_app`](https://github.com/kushkumarkashyap7280/digiroutes_app)
+repo and turned into PDFs by a small script; the user-guide PDF in `public/guide/` is a copy — don't edit it by hand.
+
 ---
 
 ## Features
@@ -19,6 +33,7 @@ Live: <https://digiroutes.vercel.app>
 - QR code generator and scanner modals
 - PWA-ready, light & dark themes
 - Android helpers: "Open in app" banner on location pages, APK download link
+- **User Guide (PDF)** download — footer and About page
 
 **API** (also consumed by the app)
 - Email + password auth, JWT in an HTTP-only cookie (web) or `Bearer` token (app)
